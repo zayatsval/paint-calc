@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painting Estimate</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --border: #2a2a2a;
+    --accent: #e8c547;
+    --accent2: #ff6b35;
+    --text: #f0f0f0;
+    --muted: #666;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+  h1 { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
+  .subtitle { font-size: 11px; color: var(--muted); margin-bottom: 24px; letter-spacing: 1px; text-transform: uppercase; }
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 14px; }
+  .section-title { font-family: 'Syne', sans-serif; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+  label { font-size: 11px; color: var(--muted); min-width: 120px; }
+  input[type=number], select { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; padding: 7px 10px; flex: 1; outline: none; transition: border-color 0.2s; }
+  input[type=number]:focus, select:focus { border-color: var(--accent); }
+  .toggle-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .toggle { padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; background: var(--bg); color: var(--muted); transition: all 0.15s; }
+  .toggle.active { border-color: var(--accent); color: var(--accent); background: rgba(232,197,71,0.08); }
+  .rooms-list { display: flex; flex-direction: column; gap: 8px; }
+  .room-item { display: flex; gap: 8px; align-items: center; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
+  .room-item input { flex: 1; min-width: 0; }
+  .room-label { font-size: 10px; color: var(--muted); white-space: nowrap; }
+  .room-sqft { font-size: 11px; color: var(--accent2); min-width: 50px; text-align: right; }
+  .btn-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 0 4px; line-height: 1; }
+  .btn-remove:hover { color: var(--accent2); }
+  .btn-add { background: none; border: 1px dashed var(--border); border-radius: 6px; color: var(--muted); cursor: pointer; font-family: 'DM Mono', monospace; font-size: 11px; padding: 8px; width: 100%; transition: all 0.15s; margin-top: 6px; }
+  .btn-add:hover { border-color: var(--accent); color: var(--accent); }
+  .result-box { background: linear-gradient(135deg, #1a1a0f 0%, #1a1209 100%); border: 1px solid var(--accent); border-radius: 8px; padding: 20px; margin-bottom: 14px; }
+  .result-line { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .result-line span:last-child { color: var(--text); }
+  .result-divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+  .result-total { display: flex; justify-content: space-between; align-items: baseline; }
+  .result-total-label { font-family: 'Syne', sans-serif; font-size: 13px; color: var(--muted); }
+  .result-total-value { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--accent); }
+  .result-range { font-size: 11px; color: var(--muted); text-align: right; margin-top: 4px; }
+  .breakdown { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; }
+  .breakdown-row { display: flex; justify-content: space-between; font-size: 11px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+  .breakdown-row:last-child { border-bottom: none; }
+  .breakdown-row span:first-child { color: var(--muted); }
+  .note { font-size: 10px; color: var(--muted); line-height: 1.6; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<h1>🖌 PAINT ESTIMATE</h1>
+<div class="subtitle">Interior · Sarasota FL · 2025</div>
+
+<div class="section">
+  <div class="section-title">Комнаты</div>
+  <div class="rooms-list" id="roomsList"></div>
+  <button class="btn-add" onclick="addRoom()">+ Добавить комнату</button>
+</div>
+
+<div class="section">
+  <div class="section-title">Что красим</div>
+  <div class="toggle-row" id="scopeToggles">
+    <div class="toggle active" data-val="walls" onclick="toggleScope(this)">Стены</div>
+    <div class="toggle" data-val="ceiling" onclick="toggleScope(this)">Потолки</div>
+    <div class="toggle" data-val="trim" onclick="toggleScope(this)">Плинтус / Trim</div>
+    <div class="toggle" data-val="doors" onclick="toggleScope(this)">Двери</div>
+    <div class="toggle" data-val="cabinets" onclick="toggleScope(this)">Шкафы / Кухня</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Подготовка стен</div>
+  <div class="toggle-row">
+    <div class="toggle active" data-mult="1.0" onclick="togglePrep(this)">Хорошее состояние</div>
+    <div class="toggle" data-mult="1.15" onclick="togglePrep(this)">Небольшой ремонт</div>
+    <div class="toggle" data-mult="1.35" onclick="togglePrep(this)">Серьёзная подготовка</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Материалы</div>
+  <div class="toggle-row">
+    <div class="toggle" data-val="client" onclick="toggleMat(this)">Клиент покупает краску</div>
+    <div class="toggle active" data-val="included" onclick="toggleMat(this)">Я включаю материалы</div>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <label>Расходники ($)</label>
+    <input type="number" id="suppliesCost" value="175" min="0" max="500" oninput="calc()">
+  </div>
+  <div style="font-size:10px;color:var(--muted);margin-top:2px">tape, пленка, валики, кисти, лотки, мешки</div>
+</div>
+
+<div class="section">
+  <div class="section-title">Моя ставка</div>
+  <div class="row">
+    <label>$/час</label>
+    <input type="number" id="hourlyRate" value="65" min="30" max="150" oninput="calc()">
+  </div>
+  <div class="row">
+    <label>Сложность</label>
+    <select id="complexity" onchange="calc()">
+      <option value="1.0">Стандарт</option>
+      <option value="1.2">Высокие потолки</option>
+      <option value="1.4">Сложная геометрия</option>
+    </select>
+  </div>
+</div>
+
+<div class="result-box">
+  <div class="result-line"><span>Площадь стен</span><span id="rTotalSqft">—</span></div>
+  <div class="result-line"><span>Расчётное время</span><span id="rHours">—</span></div>
+  <div class="result-line"><span>Труд</span><span id="rLabor">$—</span></div>
+  <div class="result-line" id="rMatsRow"><span>Материалы (краска)</span><span id="rMats">$—</span></div>
+  <div class="result-line" id="rSuppliesRow"><span>Расходники</span><span id="rSupplies">$—</span></div>
+  <hr class="result-divider">
+  <div class="result-total">
+    <div class="result-total-label">ИТОГО</div>
+    <div class="result-total-value" id="rTotal">$—</div>
+  </div>
+  <div class="result-range" id="rRange"></div>
+</div>
+
+<div class="breakdown">
+  <div class="section-title" style="margin-bottom:10px">Детализация</div>
+  <div id="breakdownRows"></div>
+</div>
+
+<div class="note">
+  ⚡ Ставка $65–$75/час — стандарт для handyman в Сарасоте.<br>
+  💡 Материалы включают наценку 18% за закупку.<br>
+  📋 Давай клиенту диапазон, не фиксированную цифру.
+</div>
+
+<script>
+let rooms = [
+  { name: 'Гостиная', l: 16, w: 14, h: 9 },
+  { name: 'Спальня', l: 12, w: 11, h: 9 },
+];
+let scope = new Set(['walls']);
+let prepMult = 1.0;
+let matsIncluded = true;
+
+function sqftRoom(r) { return Math.round(2 * (r.l + r.w) * r.h * 0.85); }
+
+function renderRooms() {
+  const el = document.getElementById('roomsList');
+  el.innerHTML = '';
+  rooms.forEach((r, i) => {
+    const sq = sqftRoom(r);
+    el.innerHTML += `<div class="room-item">
+      <div style="flex:1.5;min-width:0">
+        <div class="room-label">Название</div>
+        <input type="text" value="${r.name}" style="background:transparent;border:none;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;width:100%;outline:none" onchange="rooms[${i}].name=this.value">
+      </div>
+      <div style="flex:0.8"><div class="room-label">L (ft)</div><input type="number" value="${r.l}" min="4" max="60" oninput="rooms[${i}].l=+this.value;renderRooms()"></div>
+      <div style="flex:0.8"><div class="room-label">W (ft)</div><input type="number" value="${r.w}" min="4" max="60" oninput="rooms[${i}].w=+this.value;renderRooms()"></div>
+      <div style="flex:0.7"><div class="room-label">H (ft)</div><input type="number" value="${r.h}" min="7" max="20" oninput="rooms[${i}].h=+this.value;renderRooms()"></div>
+      <div><div class="room-sqft">${sq} sqft</div><div class="room-label" style="text-align:right">walls</div></div>
+      <button class="btn-remove" onclick="removeRoom(${i})">×</button>
+    </div>`;
+  });
+  calc();
+}
+
+function addRoom() { rooms.push({ name: 'Комната', l: 12, w: 10, h: 9 }); renderRooms(); }
+function removeRoom(i) { rooms.splice(i, 1); renderRooms(); }
+
+function toggleScope(el) {
+  const v = el.dataset.val;
+  if (scope.has(v)) { scope.delete(v); el.classList.remove('active'); }
+  else { scope.add(v); el.classList.add('active'); }
+  calc();
+}
+function togglePrep(el) {
+  document.querySelectorAll('[data-mult]').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  prepMult = parseFloat(el.dataset.mult);
+  calc();
+}
+function toggleMat(el) {
+  document.querySelectorAll('[data-val="client"],[data-val="included"]').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  matsIncluded = el.dataset.val === 'included';
+  calc();
+}
+
+function calc() {
+  const hourly = parseFloat(document.getElementById('hourlyRate').value) || 65;
+  const complexity = parseFloat(document.getElementById('complexity').value) || 1.0;
+  let totalWallSqft = rooms.reduce((s, r) => s + sqftRoom(r), 0);
+  let totalCeilSqft = scope.has('ceiling') ? rooms.reduce((s, r) => s + r.l * r.w, 0) : 0;
+  let totalTrimLf = scope.has('trim') ? rooms.reduce((s, r) => s + 2 * (r.l + r.w), 0) : 0;
+  let doorCount = scope.has('doors') ? rooms.length : 0;
+  let cabinetMult = scope.has('cabinets') ? 1 : 0;
+  let hrsWalls = scope.has('walls') ? totalWallSqft / 120 : 0;
+  let hrsCeil = totalCeilSqft / 100;
+  let hrsTrim = totalTrimLf / 25;
+  let hrsDoors = doorCount * 0.75;
+  let hrsCabinets = cabinetMult * rooms.length * 3;
+  // fixed prep per room: masking, covering floor, setup/cleanup
+  let hrsPrep = rooms.length * 1.25;
+  let hrsTotal = (hrsWalls + hrsCeil + hrsTrim + hrsDoors + hrsCabinets) * complexity * prepMult + hrsPrep;
+  let labor = Math.round(hrsTotal * hourly);
+  let paintSqft = (scope.has('walls') ? totalWallSqft : 0) + totalCeilSqft;
+  let gallons = Math.ceil(paintSqft / 350 * 2);
+  let mats = matsIncluded ? Math.round(gallons * 50 * 1.18) : 0;
+  let supplies = parseFloat(document.getElementById('suppliesCost').value) || 0;
+  let total = labor + mats + supplies;
+
+  document.getElementById('rTotalSqft').textContent = (scope.has('walls') ? totalWallSqft : 0) + (totalCeilSqft ? ` + ${totalCeilSqft} ceil` : '') + ' sq ft';
+  document.getElementById('rHours').textContent = hrsTotal.toFixed(1) + ' hrs';
+  document.getElementById('rLabor').textContent = '$' + labor.toLocaleString();
+  document.getElementById('rMats').textContent = matsIncluded ? '$' + mats.toLocaleString() : 'клиент';
+  document.getElementById('rMatsRow').style.opacity = matsIncluded ? '1' : '0.4';
+  document.getElementById('rSupplies').textContent = '$' + supplies.toLocaleString();
+  document.getElementById('rTotal').textContent = '$' + total.toLocaleString();
+  document.getElementById('rRange').textContent = `Диапазон: $${Math.round(total*0.9).toLocaleString()} – $${Math.round(total*1.1).toLocaleString()}`;
+
+  let rows = '';
+  if (scope.has('walls') && totalWallSqft) rows += `<div class="breakdown-row"><span>Стены (${totalWallSqft} sqft)</span><span>$${Math.round(hrsWalls*complexity*prepMult*hourly).toLocaleString()}</span></div>`;
+  if (scope.has('ceiling') && totalCeilSqft) rows += `<div class="breakdown-row"><span>Потолки (${totalCeilSqft} sqft)</span><span>$${Math.round(hrsCeil*complexity*prepMult*hourly).toLocaleString()}</span></div>`;
+  if (scope.has('trim') && totalTrimLf) rows += `<div class="breakdown-row"><span>Trim (${totalTrimLf} lf)</span><span>$${Math.round(hrsTrim*complexity*prepMult*hourly).toLocaleString()}</span></div>`;
+  if (scope.has('doors') && doorCount) rows += `<div class="breakdown-row"><span>Двери (${doorCount} шт)</span><span>$${Math.round(hrsDoors*complexity*hourly).toLocaleString()}</span></div>`;
+  if (scope.has('cabinets') && cabinetMult) rows += `<div class="breakdown-row"><span>Шкафы / кухня</span><span>$${Math.round(hrsCabinets*complexity*hourly).toLocaleString()}</span></div>`;
+  rows += `<div class="breakdown-row"><span>Подготовка / уборка (${rooms.length} комн × 1.25h)</span><span>$${Math.round(hrsPrep*hourly).toLocaleString()}</span></div>`;
+  if (matsIncluded) rows += `<div class="breakdown-row"><span>Краска (${gallons} gal × 2 слоя)</span><span>$${mats.toLocaleString()}</span></div>`;
+  if (supplies) rows += `<div class="breakdown-row"><span>Расходники (tape, валики, кисти...)</span><span>$${supplies.toLocaleString()}</span></div>`;
+  document.getElementById('breakdownRows').innerHTML = rows || '<div class="breakdown-row"><span style="color:var(--muted)">Выбери параметры выше</span></div>';
+}
+
+renderRooms();
+</script>
+</body>
+</html>
