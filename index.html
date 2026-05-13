@@ -272,7 +272,9 @@ function calc() {
   let hrsDoors = doorCount * 0.75;
   let hrsCabinets = cabinetMult * rooms.length * 3;
   let hrsPrep = rooms.length * 1.25;
-  let hrsTotal = (hrsWalls + hrsCeil + hrsTrim + hrsDoors + hrsCabinets) * complexity * prepMult + hrsPrep;
+  // Primer coat: same speed as paint, applied to walls+ceiling
+  let hrsPrimer = (primerMode !== 'none') ? paintSqft / 120 : 0;
+  let hrsTotal = (hrsWalls + hrsCeil + hrsTrim + hrsDoors + hrsCabinets + hrsPrimer) * complexity * prepMult + hrsPrep;
 
   let labor = Math.round(hrsTotal * hourly);
   let paintSqft = (scope.has('walls') ? totalWallSqft : 0) + totalCeilSqft;
@@ -316,6 +318,9 @@ function calc() {
       const primerLabel = primerMode === 'tinted' ? 'Tinted primer' : 'Primer';
       rows += row(primerLabel + ' (' + primerGallons + ' gal × $' + primerPricePerGal + ')', primerCost);
     }
+  if (primerMode !== 'none') {
+    rows += row('Нанесение грунтовки (' + hrsPrimer.toFixed(1) + ' hrs)', Math.round(hrsPrimer * complexity * prepMult * hourly));
+  }
   }
   if (supplies) rows += row('Расходники (tape, валики, кисти...)', supplies);
   document.getElementById('breakdownRows').innerHTML = rows || '<div class="breakdown-row"><span style="color:var(--muted)">Выбери параметры выше</span></div>';
