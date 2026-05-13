@@ -344,10 +344,8 @@ async function saveProject(forceNew) {
 
   showToast('Сохраняю...');
   try {
-    await fetch(API, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'save', project: entry })
-    });
+    const url = API + '?action=save&project=' + encodeURIComponent(JSON.stringify(entry));
+    await fetch(url);
     currentProjectId = id;
     await loadProjects();
     showToast(forceNew ? 'Новый проект сохранён ✓' : 'Обновлено: ' + name + ' ✓');
@@ -394,10 +392,7 @@ async function deleteProject(id, e) {
   e.stopPropagation();
   if (!confirm('Удалить проект?')) return;
   try {
-    await fetch(API, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'delete', id })
-    });
+    await fetch(API + '?action=delete&id=' + encodeURIComponent(id));
     if (currentProjectId === id) currentProjectId = null;
     await loadProjects();
     showToast('Удалено');
