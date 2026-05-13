@@ -60,6 +60,7 @@
   .save-inp:focus { border-color:var(--accent); }
   .btn-save { background:var(--accent); border:none; border-radius:4px; color:#000; cursor:pointer; font-family:'Syne',sans-serif; font-size:12px; font-weight:700; padding:9px 16px; white-space:nowrap; }
   .btn-new { background:none; border:1px solid var(--border); border-radius:4px; color:var(--muted); cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; padding:9px; width:100%; margin-top:8px; }
+  .btn-save-new { background:none; border:1px solid var(--accent); border-radius:4px; color:var(--accent); cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; padding:9px; width:100%; margin-top:8px; }
   .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--green); color:#000; font-family:'Syne',sans-serif; font-size:12px; font-weight:700; padding:10px 22px; border-radius:20px; opacity:0; transition:opacity 0.3s; pointer-events:none; z-index:999; white-space:nowrap; }
   .toast.show { opacity:1; }
   .note { font-size:10px; color:var(--muted); line-height:1.7; }
@@ -76,9 +77,10 @@
   <div class="project-list" id="projectList"></div>
   <div class="save-row">
     <input type="text" class="save-inp" id="projectName" placeholder="Имя клиента / адрес...">
-    <button class="btn-save" onclick="saveProject()">Сохранить</button>
+    <button class="btn-save" onclick="saveProject(false)">Сохранить</button>
   </div>
-  <button class="btn-new" onclick="newProject()">+ Новый проект (сбросить)</button>
+  <button class="btn-save-new" onclick="saveProject(true)">+ Сохранить как новый проект</button>
+  <button class="btn-new" onclick="newProject()">↺ Сбросить всё</button>
 </div>
 
 <!-- ROOMS -->
@@ -308,7 +310,7 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2000);
 }
 
-function saveProject() {
+function saveProject(forceNew) {
   const name = document.getElementById('projectName').value.trim();
   if (!name) { showToast('Введи имя проекта'); return; }
   const projects = getProjects();
@@ -323,7 +325,8 @@ function saveProject() {
     complexity: document.getElementById('complexity').value,
     total
   };
-  const id = currentProjectId || Date.now().toString();
+  // forceNew = always create new; otherwise update existing if loaded
+  const id = (!forceNew && currentProjectId) ? currentProjectId : Date.now().toString();
   const existing = projects.findIndex(p => p.id === id);
   const entry = { id, name, date: new Date().toLocaleDateString('ru'), state };
   if (existing >= 0) projects[existing] = entry;
@@ -331,7 +334,11 @@ function saveProject() {
   setProjects(projects);
   currentProjectId = id;
   renderProjects();
-  showToast('Сохранено: ' + name);
+  showToast(forceNew ? 'Новый проект сохранён' : 'Обновлено: ' + name);
+  if (forceNew) {
+    currentProjectId = null;
+    document.getElementById('projectName').value = '';
+  }
 }
 
 function loadProject(id) {
