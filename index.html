@@ -128,15 +128,34 @@
     <div class="toggle" data-val="client" onclick="toggleMat(this)">Клиент покупает краску</div>
     <div class="toggle active" data-val="included" onclick="toggleMat(this)">Я включаю материалы</div>
   </div>
-  <div class="row" style="margin-top:12px">
-    <label>Слоёв краски</label>
-    <div class="toggle-row" id="coatToggles">
-      <div class="toggle" data-val="1" onclick="toggleCoats(this)">1 слой</div>
-      <div class="toggle active" data-val="2" onclick="toggleCoats(this)">2 слоя</div>
-      <div class="toggle" data-val="3" onclick="toggleCoats(this)">3 слоя</div>
+  <div style="margin-top:12px">
+    <div class="sub-title" style="margin-bottom:8px">Слои краски</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="row" style="margin-bottom:0">
+        <label>Стены</label>
+        <div class="toggle-row" id="coatsWalls">
+          <div class="toggle" data-val="1" onclick="toggleCoat('coatsWalls',this)">1</div>
+          <div class="toggle active" data-val="2" onclick="toggleCoat('coatsWalls',this)">2</div>
+          <div class="toggle" data-val="3" onclick="toggleCoat('coatsWalls',this)">3</div>
+        </div>
+      </div>
+      <div class="row" style="margin-bottom:0">
+        <label>Потолки</label>
+        <div class="toggle-row" id="coacsCeil">
+          <div class="toggle active" data-val="1" onclick="toggleCoat('coacsCeil',this)">1</div>
+          <div class="toggle" data-val="2" onclick="toggleCoat('coacsCeil',this)">2</div>
+        </div>
+      </div>
+      <div class="row" style="margin-bottom:0">
+        <label>Trim / Двери</label>
+        <div class="toggle-row" id="coatsTrim">
+          <div class="toggle" data-val="1" onclick="toggleCoat('coatsTrim',this)">1</div>
+          <div class="toggle active" data-val="2" onclick="toggleCoat('coatsTrim',this)">2</div>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="row">
+  <div class="row" style="margin-top:12px">
     <label>Расходники ($)</label>
     <input type="tel" id="suppliesCost" value="175" placeholder="175" onblur="calc()">
   </div>
@@ -197,7 +216,9 @@ let scope = new Set(['walls']);
 let prepMult = 1.0;
 let matsIncluded = true;
 let primerMode = 'tinted';
-let paintCoats = 2;
+let coatsWalls = 2;
+let coacsCeil = 1;
+let coatsTrim = 2;
 let currentProjectId = null;
 let projectsCache = [];
 
@@ -261,10 +282,13 @@ function toggleMat(el) {
   matsIncluded = el.dataset.val === 'included';
   calc();
 }
-function toggleCoats(el) {
-  document.querySelectorAll('#coatToggles .toggle').forEach(t => t.classList.remove('active'));
+function toggleCoat(groupId, el) {
+  document.querySelectorAll('#' + groupId + ' .toggle').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  paintCoats = parseInt(el.dataset.val);
+  const val = parseInt(el.dataset.val);
+  if (groupId === 'coatsWalls') coatsWalls = val;
+  else if (groupId === 'coacsCeil') coacsCeil = val;
+  else if (groupId === 'coatsTrim') coatsTrim = val;
   calc();
 }
 
@@ -294,8 +318,9 @@ function calc() {
   const paintSqft     = (scope.has('walls') ? totalWallSqft : 0) + totalCeilSqft;
 
   // Labor hours
-  const hrsWalls    = scope.has('walls') ? totalWallSqft / 120 * paintCoats : 0;
-  const hrsCeil     = totalCeilSqft / 100 * paintCoats;
+  const hrsWalls    = scope.has('walls') ? totalWallSqft / 120 * coatsWalls : 0;
+  const hrsCeil     = totalCeilSqft / 100 * coacsCeil;
+  
   const hrsTrim     = totalTrimLf / 25;
   const hrsDoors    = doorCount * 0.75;
   const hrsCabinets = cabinetMult * rooms.length * 3;
@@ -305,15 +330,17 @@ function calc() {
   const labor       = Math.round(hrsTotal * hourly);
 
   // Paint gallons
-  const galWallsCeil  = paintSqft / 350 * paintCoats;
-  const galTrim       = scope.has('trim') ? totalTrimLf / 200 : 0;
-  const galDoors      = scope.has('doors') ? doorCount * 0.25 : 0;
+  const galWalls      = scope.has('walls') ? totalWallSqft / 350 * coatsWalls : 0;
+  const galCeil       = totalCeilSqft / 350 * coacsCeil;
+  const galTrim       = scope.has('trim') ? totalTrimLf / 200 * coatsTrim : 0;
+  const galDoors      = scope.has('doors') ? doorCount * 0.25 * coatsTrim : 0;
   const galCabinets   = scope.has('cabinets') ? rooms.length * 1.0 : 0;
-  const gallons       = Math.ceil(galWallsCeil + galTrim + galDoors + galCabinets);
+  const gallons       = Math.ceil(galWalls + galCeil + galTrim + galDoors + galCabinets);
   const paintCost     = matsIncluded ? Math.round(gallons * 50 * 1.18) : 0;
 
   // Primer
-  const primerGallons   = primerMode !== 'none' ? Math.ceil(paintSqft / 350) : 0;
+  const primerSqft      = (scope.has('walls') ? totalWallSqft : 0) + totalCeilSqft;
+  const primerGallons   = primerMode !== 'none' ? Math.ceil(primerSqft / 350) : 0;
   const primerPriceGal  = primerMode === 'tinted' ? 25 : 20;
   const primerCost      = matsIncluded && primerMode !== 'none' ? Math.round(primerGallons * primerPriceGal * 1.18) : 0;
 
@@ -346,7 +373,7 @@ function calc() {
     if (scope.has('trim') && totalTrimLf) parts.push('trim');
     if (scope.has('doors') && doorCount) parts.push('двери');
     if (scope.has('cabinets') && cabinetMult) parts.push('шкафы');
-    rows += R('Краска (' + gallons + ' gal, ' + paintCoats + ' сл. — ' + (parts.join(', ') || '—') + ')', paintCost);
+    rows += R('Краска (' + gallons + ' gal — ' + (parts.join(', ') || '—') + ')', paintCost);
     if (primerMode !== 'none') {
       rows += R((primerMode === 'tinted' ? 'Tinted primer' : 'Primer') + ' (' + primerGallons + ' gal × $' + primerPriceGal + ')', primerCost);
     }
@@ -386,7 +413,7 @@ async function saveProject(forceNew) {
   const state = {
     rooms: JSON.parse(JSON.stringify(rooms)),
     scope: Array.from(scope),
-    prepMult, matsIncluded, primerMode, paintCoats,
+    prepMult, matsIncluded, primerMode, coatsWalls, coacsCeil, coatsTrim,
     hourlyRate: document.getElementById('hourlyRate').value,
     supplies: document.getElementById('suppliesCost').value,
     complexity: document.getElementById('complexity').value,
@@ -415,7 +442,9 @@ function loadProject(id) {
   prepMult = s.prepMult;
   matsIncluded = s.matsIncluded;
   primerMode = s.primerMode || 'tinted';
-  paintCoats = s.paintCoats || 2;
+  coatsWalls = s.coatsWalls || 2;
+  coacsCeil  = s.coacsCeil  || 1;
+  coatsTrim  = s.coatsTrim  || 2;
   currentProjectId = id;
   document.getElementById('projectName').value = p.name;
   document.getElementById('hourlyRate').value = s.hourlyRate;
@@ -423,7 +452,9 @@ function loadProject(id) {
   document.getElementById('complexity').value = s.complexity;
 
   document.querySelectorAll('#scopeToggles .toggle').forEach(t => t.classList.toggle('active', scope.has(t.dataset.val)));
-  document.querySelectorAll('#coatToggles .toggle').forEach(t => t.classList.toggle('active', parseInt(t.dataset.val) === paintCoats));
+  document.querySelectorAll('#coatsWalls .toggle').forEach(t => t.classList.toggle('active', parseInt(t.dataset.val) === coatsWalls));
+  document.querySelectorAll('#coacsCeil .toggle').forEach(t => t.classList.toggle('active', parseInt(t.dataset.val) === coacsCeil));
+  document.querySelectorAll('#coatsTrim .toggle').forEach(t => t.classList.toggle('active', parseInt(t.dataset.val) === coatsTrim));
   document.querySelectorAll('#prepToggles .toggle').forEach(t => t.classList.toggle('active', parseFloat(t.dataset.mult) === prepMult));
   document.querySelectorAll('#matToggles .toggle').forEach(t => t.classList.toggle('active', (t.dataset.val === 'included') === matsIncluded));
   document.querySelectorAll('#primerToggles .toggle').forEach(t => {
@@ -453,7 +484,7 @@ async function deleteProject(id, e) {
 function newProject() {
   rooms = [{ name: 'Гостиная', l: 16, w: 14, h: 9 }, { name: 'Спальня', l: 12, w: 11, h: 9 }];
   scope = new Set(['walls']);
-  prepMult = 1.0; matsIncluded = true; primerMode = 'tinted'; paintCoats = 2;
+  prepMult = 1.0; matsIncluded = true; primerMode = 'tinted'; coatsWalls = 2; coacsCeil = 1; coatsTrim = 2;
   currentProjectId = null;
   document.getElementById('projectName').value = '';
   document.getElementById('hourlyRate').value = '65';
@@ -462,7 +493,9 @@ function newProject() {
   document.querySelectorAll('#scopeToggles .toggle').forEach(t => t.classList.toggle('active', t.dataset.val === 'walls'));
   document.querySelectorAll('#prepToggles .toggle').forEach((t,i) => t.classList.toggle('active', i === 0));
   document.querySelectorAll('#matToggles .toggle').forEach((t,i) => t.classList.toggle('active', i === 1));
-  document.querySelectorAll('#coatToggles .toggle').forEach(t => t.classList.toggle('active', t.dataset.val === '2'));
+  document.querySelectorAll('#coatsWalls .toggle').forEach(t => t.classList.toggle('active', t.dataset.val === '2'));
+  document.querySelectorAll('#coacsCeil .toggle').forEach(t => t.classList.toggle('active', t.dataset.val === '1'));
+  document.querySelectorAll('#coatsTrim .toggle').forEach(t => t.classList.toggle('active', t.dataset.val === '2'));
   document.querySelectorAll('#primerToggles .toggle').forEach(t => {
     t.classList.remove('active'); t.classList.remove('primer-active');
     if (t.dataset.val === 'tinted') t.classList.add('primer-active');
