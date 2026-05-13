@@ -297,23 +297,37 @@ function row(label, val) {
   return '<div class="breakdown-row"><span>' + label + '</span><span>$' + val.toLocaleString() + '</span></div>';
 }
 
-// --- Projects ---
-function getProjects() {
-  try { return JSON.parse(localStorage.getItem('paintProjects') || '[]'); } catch { return []; }
-}
-function setProjects(p) { localStorage.setItem('paintProjects', JSON.stringify(p)); }
+const API = 'https://script.google.com/macros/s/AKfycbxDQihFRr3kaXk7oxdmEAqgiMDAQFS9Y77D6G9EabfTXyhTxfThZhg4NAxEm-eZv5aI/exec';
+let projectsCache = [];
 
-function showToast(msg) {
+function showToast(msg, color) {
   const t = document.getElementById('toast');
   t.textContent = msg;
+  t.style.background = color || 'var(--green)';
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2000);
+  setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-function saveProject(forceNew) {
+function setLoading(on) {
+  document.getElementById('projectList').style.opacity = on ? '0.4' : '1';
+}
+
+async function loadProjects() {
+  setLoading(true);
+  try {
+    const r = await fetch(API + '?action=load');
+    projectsCache = await r.json();
+  } catch(e) {
+    showToast('Нет соединения', '#f87171');
+    projectsCache = [];
+  }
+  setLoading(false);
+  renderProjects();
+}
+
+async function saveProject(forceNew) {
   const name = document.getElementById('projectName').value.trim();
-  if (!name) { showToast('Введи имя проекта'); return; }
-  const projects = getProjects();
+  if (!name) { showToast('Введи имя проекта', '#f87171'); return; }
   const total = calc();
   const state = {
     rooms: JSON.parse(JSON.stringify(rooms)),
@@ -325,25 +339,29 @@ function saveProject(forceNew) {
     complexity: document.getElementById('complexity').value,
     total
   };
-  // forceNew = always create new; otherwise update existing if loaded
   const id = (!forceNew && currentProjectId) ? currentProjectId : Date.now().toString();
-  const existing = projects.findIndex(p => p.id === id);
   const entry = { id, name, date: new Date().toLocaleDateString('ru'), state };
-  if (existing >= 0) projects[existing] = entry;
-  else projects.unshift(entry);
-  setProjects(projects);
-  currentProjectId = id;
-  renderProjects();
-  showToast(forceNew ? 'Новый проект сохранён' : 'Обновлено: ' + name);
-  if (forceNew) {
-    currentProjectId = null;
-    document.getElementById('projectName').value = '';
+
+  showToast('Сохраняю...');
+  try {
+    await fetch(API, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'save', project: entry })
+    });
+    currentProjectId = id;
+    await loadProjects();
+    showToast(forceNew ? 'Новый проект сохранён ✓' : 'Обновлено: ' + name + ' ✓');
+    if (forceNew) {
+      currentProjectId = null;
+      document.getElementById('projectName').value = '';
+    }
+  } catch(e) {
+    showToast('Ошибка сохранения', '#f87171');
   }
 }
 
 function loadProject(id) {
-  const projects = getProjects();
-  const p = projects.find(x => x.id === id);
+  const p = projectsCache.find(x => x.id === id);
   if (!p) return;
   const s = p.state;
   rooms = JSON.parse(JSON.stringify(s.rooms));
@@ -356,15 +374,12 @@ function loadProject(id) {
   document.getElementById('suppliesCost').value = s.supplies;
   document.getElementById('complexity').value = s.complexity;
 
-  // restore scope toggles
   document.querySelectorAll('#scopeToggles .toggle').forEach(t => {
     t.classList.toggle('active', scope.has(t.dataset.val));
   });
-  // restore prep toggles
   document.querySelectorAll('#prepToggles .toggle').forEach(t => {
     t.classList.toggle('active', parseFloat(t.dataset.mult) === prepMult);
   });
-  // restore mat toggles
   document.querySelectorAll('#matToggles .toggle').forEach(t => {
     t.classList.toggle('active', (t.dataset.val === 'included') === matsIncluded);
   });
@@ -372,15 +387,23 @@ function loadProject(id) {
   renderRooms();
   renderProjects();
   window.scrollTo(0, 0);
+  showToast('Загружено: ' + p.name);
 }
 
-function deleteProject(id, e) {
+async function deleteProject(id, e) {
   e.stopPropagation();
-  const projects = getProjects().filter(p => p.id !== id);
-  setProjects(projects);
-  if (currentProjectId === id) currentProjectId = null;
-  renderProjects();
-  showToast('Удалено');
+  if (!confirm('Удалить проект?')) return;
+  try {
+    await fetch(API, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'delete', id })
+    });
+    if (currentProjectId === id) currentProjectId = null;
+    await loadProjects();
+    showToast('Удалено');
+  } catch(e) {
+    showToast('Ошибка удаления', '#f87171');
+  }
 }
 
 function newProject() {
@@ -402,10 +425,12 @@ function newProject() {
 }
 
 function renderProjects() {
-  const projects = getProjects();
   const el = document.getElementById('projectList');
-  if (!projects.length) { el.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">Нет сохранённых проектов</div>'; return; }
-  el.innerHTML = projects.map(p => `
+  if (!projectsCache.length) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">Нет сохранённых проектов</div>';
+    return;
+  }
+  el.innerHTML = projectsCache.map(p => `
     <div class="project-item ${p.id === currentProjectId ? 'current' : ''}" onclick="loadProject('${p.id}')">
       <div class="proj-info">
         <div class="proj-name">${p.name}</div>
@@ -417,7 +442,7 @@ function renderProjects() {
 }
 
 renderRooms();
-renderProjects();
+loadProjects();
 </script>
 </body>
 </html>
