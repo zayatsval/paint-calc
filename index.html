@@ -318,14 +318,14 @@ function calc() {
   const paintSqft     = (scope.has('walls') ? totalWallSqft : 0) + totalCeilSqft;
 
   // Labor hours
-  const hrsWalls    = scope.has('walls') ? totalWallSqft / 120 * coatsWalls : 0;
-  const hrsCeil     = totalCeilSqft / 100 * coacsCeil;
-  
+  const hrsWalls    = scope.has('walls') ? totalWallSqft / 240 * coatsWalls : 0;
+  const hrsCeil     = totalCeilSqft / 200 * coacsCeil;
+
   const hrsTrim     = totalTrimLf / 25;
   const hrsDoors    = doorCount * 0.75;
   const hrsCabinets = cabinetMult * rooms.length * 3;
   const hrsPrep     = rooms.length * 1.25;
-  const hrsPrimer   = primerMode !== 'none' ? paintSqft / 120 : 0;
+  const hrsPrimer   = primerMode !== 'none' ? paintSqft / 240 : 0;
   const hrsTotal    = (hrsWalls + hrsCeil + hrsTrim + hrsDoors + hrsCabinets + hrsPrimer) * complexity * prepMult + hrsPrep;
   const labor       = Math.round(hrsTotal * hourly);
 
