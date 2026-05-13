@@ -14,6 +14,7 @@
   .section { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:14px; }
   .section-title { font-family:'Syne',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--accent); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
   .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+  .sub-title { font-family:'Syne',sans-serif; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin:12px 0 8px; }
   .row { display:flex; gap:10px; margin-bottom:10px; align-items:center; }
   label { font-size:11px; color:var(--muted); min-width:120px; }
   input[type=text], input[type=tel], select { background:var(--bg); border:1px solid var(--border); border-radius:4px; color:var(--text); font-family:'DM Mono',monospace; font-size:14px; padding:8px 10px; flex:1; outline:none; transition:border-color 0.2s; -webkit-appearance:none; appearance:none; }
@@ -21,6 +22,7 @@
   .toggle-row { display:flex; gap:6px; flex-wrap:wrap; }
   .toggle { padding:7px 12px; border:1px solid var(--border); border-radius:4px; font-family:'DM Mono',monospace; font-size:11px; cursor:pointer; background:var(--bg); color:var(--muted); transition:all 0.15s; user-select:none; }
   .toggle.active { border-color:var(--accent); color:var(--accent); background:rgba(232,197,71,0.08); }
+  .toggle.primer-active { border-color:#7dd3fc; color:#7dd3fc; background:rgba(125,211,252,0.08); }
   .rooms-list { display:flex; flex-direction:column; gap:10px; }
   .room-item { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:10px; }
   .room-name-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
@@ -28,7 +30,7 @@
   .room-dims { display:flex; gap:8px; }
   .dim-block { flex:1; }
   .dim-label { font-size:9px; color:var(--muted); margin-bottom:3px; letter-spacing:0.5px; }
-  .dim-inp { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:4px; color:var(--text); font-family:'DM Mono',monospace; font-size:15px; padding:8px 4px; outline:none; text-align:center; -webkit-appearance:none; appearance:none; }
+  .dim-inp { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:4px; color:var(--text); font-family:'DM Mono',monospace; font-size:15px; padding:8px 4px; outline:none; text-align:center; -webkit-appearance:none; }
   .dim-inp:focus { border-color:var(--accent); }
   .room-sqft-row { display:flex; justify-content:space-between; align-items:center; margin-top:8px; }
   .room-sqft { font-size:12px; color:var(--accent2); }
@@ -46,7 +48,6 @@
   .breakdown-row { display:flex; justify-content:space-between; font-size:11px; padding:5px 0; border-bottom:1px solid var(--border); }
   .breakdown-row:last-child { border-bottom:none; }
   .breakdown-row span:first-child { color:var(--muted); }
-  /* Projects */
   .project-list { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
   .project-item { display:flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:10px 12px; cursor:pointer; transition:border-color 0.15s; }
   .project-item.current { border-color:var(--accent); }
@@ -59,8 +60,9 @@
   .save-inp { flex:1; background:var(--bg); border:1px solid var(--border); border-radius:4px; color:var(--text); font-family:'DM Mono',monospace; font-size:13px; padding:9px 10px; outline:none; }
   .save-inp:focus { border-color:var(--accent); }
   .btn-save { background:var(--accent); border:none; border-radius:4px; color:#000; cursor:pointer; font-family:'Syne',sans-serif; font-size:12px; font-weight:700; padding:9px 16px; white-space:nowrap; }
-  .btn-new { background:none; border:1px solid var(--border); border-radius:4px; color:var(--muted); cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; padding:9px; width:100%; margin-top:8px; }
   .btn-save-new { background:none; border:1px solid var(--accent); border-radius:4px; color:var(--accent); cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; padding:9px; width:100%; margin-top:8px; }
+  .btn-new { background:none; border:1px solid var(--border); border-radius:4px; color:var(--muted); cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; padding:9px; width:100%; margin-top:8px; }
+  .primer-note { font-size:10px; color:#7dd3fc; margin-top:6px; }
   .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--green); color:#000; font-family:'Syne',sans-serif; font-size:12px; font-weight:700; padding:10px 22px; border-radius:20px; opacity:0; transition:opacity 0.3s; pointer-events:none; z-index:999; white-space:nowrap; }
   .toast.show { opacity:1; }
   .note { font-size:10px; color:var(--muted); line-height:1.7; }
@@ -74,7 +76,7 @@
 <!-- PROJECTS -->
 <div class="section">
   <div class="section-title">Проекты</div>
-  <div class="project-list" id="projectList"></div>
+  <div class="project-list" id="projectList"><div style="font-size:11px;color:var(--muted);padding:4px 0">Загрузка...</div></div>
   <div class="save-row">
     <input type="text" class="save-inp" id="projectName" placeholder="Имя клиента / адрес...">
     <button class="btn-save" onclick="saveProject(false)">Сохранить</button>
@@ -100,15 +102,13 @@
     <div class="toggle" data-val="doors" onclick="toggleScope(this)">Двери</div>
     <div class="toggle" data-val="cabinets" onclick="toggleScope(this)">Шкафы / Кухня</div>
   </div>
-  <div style="margin-top:10px">
-    <div class="section-title" style="margin-bottom:8px;font-size:10px">Грунтовка (Primer)</div>
-    <div class="toggle-row" id="primerToggles">
-      <div class="toggle" data-val="none" onclick="togglePrimer(this)">Без грунтовки</div>
-      <div class="toggle active" data-val="tinted" onclick="togglePrimer(this)">Tinted primer (1 слой)</div>
-      <div class="toggle" data-val="regular" onclick="togglePrimer(this)">Обычный primer (1 слой)</div>
-    </div>
-    <div style="font-size:10px;color:var(--muted);margin-top:6px" id="primerNote">Рекомендуется при переходе с тёмного в светлый — дешевле краски (~$25/gal)</div>
+  <div class="sub-title">Грунтовка (Primer)</div>
+  <div class="toggle-row" id="primerToggles">
+    <div class="toggle" data-val="none" onclick="togglePrimer(this)">Без грунтовки</div>
+    <div class="toggle primer-active" data-val="tinted" onclick="togglePrimer(this)">Tinted primer</div>
+    <div class="toggle" data-val="regular" onclick="togglePrimer(this)">Обычный primer</div>
   </div>
+  <div class="primer-note" id="primerNote">Tinted primer — рекомендуется при переходе с тёмного в светлый (~$25/gal)</div>
 </div>
 
 <!-- PREP -->
@@ -157,7 +157,7 @@
   <div class="result-line"><span>Площадь стен</span><span id="rTotalSqft">—</span></div>
   <div class="result-line"><span>Расчётное время</span><span id="rHours">—</span></div>
   <div class="result-line"><span>Труд</span><span id="rLabor">$—</span></div>
-  <div class="result-line" id="rMatsRow"><span>Материалы (краска)</span><span id="rMats">$—</span></div>
+  <div class="result-line" id="rMatsRow"><span>Материалы (краска + primer)</span><span id="rMats">$—</span></div>
   <div class="result-line"><span>Расходники</span><span id="rSupplies">$—</span></div>
   <hr class="result-divider">
   <div class="result-total">
@@ -182,21 +182,24 @@
 <div class="toast" id="toast"></div>
 
 <script>
+const API = 'https://script.google.com/macros/s/AKfycbxDQihFRr3kaXk7oxdmEAqgiMDAQFS9Y77D6G9EabfTXyhTxfThZhg4NAxEm-eZv5aI/exec';
+
 let rooms = [{ name: 'Гостиная', l: 16, w: 14, h: 9 }, { name: 'Спальня', l: 12, w: 11, h: 9 }];
 let scope = new Set(['walls']);
 let prepMult = 1.0;
 let matsIncluded = true;
-let primerMode = 'tinted'; // none | tinted | regular
+let primerMode = 'tinted';
 let currentProjectId = null;
+let projectsCache = [];
 
-function sqftRoom(r) { return Math.round(2 * (r.l + r.w) * r.h * 0.85); }
-
-// --- Input fix: select all on focus for easy clearing ---
+// Select all on focus for easy editing on mobile
 document.addEventListener('focusin', function(e) {
   if (e.target.type === 'tel' || e.target.classList.contains('dim-inp')) {
     setTimeout(() => e.target.select(), 0);
   }
 });
+
+function sqftRoom(r) { return Math.round(2 * (r.l + r.w) * r.h * 0.85); }
 
 // --- Rooms ---
 function renderRooms() {
@@ -206,20 +209,17 @@ function renderRooms() {
     const sq = sqftRoom(r);
     const div = document.createElement('div');
     div.className = 'room-item';
-    div.innerHTML = `
-      <div class="room-name-row">
-        <input class="room-name-inp" type="text" value="${r.name}" placeholder="Название" onchange="rooms[${i}].name=this.value;calc()">
-        <button class="btn-remove" onclick="removeRoom(${i})">×</button>
-      </div>
-      <div class="room-dims">
-        <div class="dim-block"><div class="dim-label">ДЛИНА (ft)</div><input class="dim-inp" type="tel" value="${r.l}" placeholder="0" onblur="updateDim(${i},'l',this.value)"></div>
-        <div class="dim-block"><div class="dim-label">ШИРИНА (ft)</div><input class="dim-inp" type="tel" value="${r.w}" placeholder="0" onblur="updateDim(${i},'w',this.value)"></div>
-        <div class="dim-block"><div class="dim-label">ВЫСОТА (ft)</div><input class="dim-inp" type="tel" value="${r.h}" placeholder="0" onblur="updateDim(${i},'h',this.value)"></div>
-      </div>
-      <div class="room-sqft-row">
-        <span style="font-size:10px;color:var(--muted)">стены</span>
-        <span class="room-sqft">${sq} sq ft</span>
-      </div>`;
+    div.innerHTML =
+      '<div class="room-name-row">' +
+        '<input class="room-name-inp" type="text" value="' + r.name + '" placeholder="Название" onchange="rooms[' + i + '].name=this.value;calc()">' +
+        '<button class="btn-remove" onclick="removeRoom(' + i + ')">×</button>' +
+      '</div>' +
+      '<div class="room-dims">' +
+        '<div class="dim-block"><div class="dim-label">ДЛИНА (ft)</div><input class="dim-inp" type="tel" value="' + r.l + '" onblur="updateDim(' + i + ',\'l\',this.value)"></div>' +
+        '<div class="dim-block"><div class="dim-label">ШИРИНА (ft)</div><input class="dim-inp" type="tel" value="' + r.w + '" onblur="updateDim(' + i + ',\'w\',this.value)"></div>' +
+        '<div class="dim-block"><div class="dim-label">ВЫСОТА (ft)</div><input class="dim-inp" type="tel" value="' + r.h + '" onblur="updateDim(' + i + ',\'h\',this.value)"></div>' +
+      '</div>' +
+      '<div class="room-sqft-row"><span style="font-size:10px;color:var(--muted)">стены</span><span class="room-sqft">' + sq + ' sq ft</span></div>';
     el.appendChild(div);
   });
   calc();
@@ -227,10 +227,9 @@ function renderRooms() {
 
 function updateDim(i, key, val) {
   const n = parseFloat(val);
-  if (!isNaN(n) && n > 0) { rooms[i][key] = n; }
+  if (!isNaN(n) && n > 0) rooms[i][key] = n;
   renderRooms();
 }
-
 function addRoom() { rooms.push({ name: 'Комната', l: 12, w: 10, h: 9 }); renderRooms(); }
 function removeRoom(i) { rooms.splice(i, 1); renderRooms(); }
 
@@ -253,6 +252,17 @@ function toggleMat(el) {
   matsIncluded = el.dataset.val === 'included';
   calc();
 }
+function togglePrimer(el) {
+  document.querySelectorAll('#primerToggles .toggle').forEach(t => { t.classList.remove('active'); t.classList.remove('primer-active'); });
+  primerMode = el.dataset.val;
+  if (primerMode !== 'none') el.classList.add('primer-active');
+  else el.classList.add('active');
+  const note = document.getElementById('primerNote');
+  if (primerMode === 'none') note.textContent = 'Краска в 2 слоя без грунтовки';
+  else if (primerMode === 'tinted') note.textContent = 'Tinted primer — рекомендуется при переходе с тёмного в светлый (~$25/gal)';
+  else note.textContent = 'Стандартный белый primer (~$20/gal)';
+  calc();
+}
 
 // --- Calc ---
 function calc() {
@@ -260,36 +270,41 @@ function calc() {
   const complexity = parseFloat(document.getElementById('complexity').value) || 1.0;
   const supplies = parseFloat(document.getElementById('suppliesCost').value) || 0;
 
-  let totalWallSqft = rooms.reduce((s, r) => s + sqftRoom(r), 0);
-  let totalCeilSqft = scope.has('ceiling') ? rooms.reduce((s, r) => s + r.l * r.w, 0) : 0;
-  let totalTrimLf = scope.has('trim') ? rooms.reduce((s, r) => s + 2 * (r.l + r.w), 0) : 0;
-  let doorCount = scope.has('doors') ? rooms.length : 0;
-  let cabinetMult = scope.has('cabinets') ? 1 : 0;
+  const totalWallSqft = rooms.reduce((s, r) => s + sqftRoom(r), 0);
+  const totalCeilSqft = scope.has('ceiling') ? rooms.reduce((s, r) => s + r.l * r.w, 0) : 0;
+  const totalTrimLf   = scope.has('trim') ? rooms.reduce((s, r) => s + 2 * (r.l + r.w), 0) : 0;
+  const doorCount     = scope.has('doors') ? rooms.length : 0;
+  const cabinetMult   = scope.has('cabinets') ? 1 : 0;
+  const paintSqft     = (scope.has('walls') ? totalWallSqft : 0) + totalCeilSqft;
 
-  let hrsWalls = scope.has('walls') ? totalWallSqft / 120 : 0;
-  let hrsCeil = totalCeilSqft / 100;
-  let hrsTrim = totalTrimLf / 25;
-  let hrsDoors = doorCount * 0.75;
-  let hrsCabinets = cabinetMult * rooms.length * 3;
-  let hrsPrep = rooms.length * 1.25;
-  // Primer coat: same speed as paint, applied to walls+ceiling
-  let hrsPrimer = (primerMode !== 'none') ? paintSqft / 120 : 0;
-  let hrsTotal = (hrsWalls + hrsCeil + hrsTrim + hrsDoors + hrsCabinets + hrsPrimer) * complexity * prepMult + hrsPrep;
+  // Labor hours
+  const hrsWalls    = scope.has('walls') ? totalWallSqft / 120 : 0;
+  const hrsCeil     = totalCeilSqft / 100;
+  const hrsTrim     = totalTrimLf / 25;
+  const hrsDoors    = doorCount * 0.75;
+  const hrsCabinets = cabinetMult * rooms.length * 3;
+  const hrsPrep     = rooms.length * 1.25;
+  const hrsPrimer   = primerMode !== 'none' ? paintSqft / 120 : 0;
+  const hrsTotal    = (hrsWalls + hrsCeil + hrsTrim + hrsDoors + hrsCabinets + hrsPrimer) * complexity * prepMult + hrsPrep;
+  const labor       = Math.round(hrsTotal * hourly);
 
-  let labor = Math.round(hrsTotal * hourly);
-  let paintSqft = (scope.has('walls') ? totalWallSqft : 0) + totalCeilSqft;
-  let gallonsWallsCeil = paintSqft / 350 * 2;
-  let gallonsTrim = scope.has('trim') ? totalTrimLf / 200 : 0;
-  let gallonsDoors = scope.has('doors') ? doorCount * 0.25 : 0;
-  let gallonsCabinets = scope.has('cabinets') ? rooms.length * 1 : 0;
-  let gallons = Math.ceil(gallonsWallsCeil + gallonsTrim + gallonsDoors + gallonsCabinets);
-  // Primer: covers same sqft as walls+ceiling, 1 coat, cheaper per gal
-  let primerGallons = (primerMode !== 'none') ? Math.ceil(paintSqft / 350) : 0;
-  let primerPricePerGal = primerMode === 'tinted' ? 25 : 20;
-  let primerCost = matsIncluded ? Math.round(primerGallons * primerPricePerGal * 1.18) : 0;
-  let mats = matsIncluded ? Math.round(gallons * 50 * 1.18) + primerCost : 0;
-  let total = labor + mats + supplies;
+  // Paint gallons
+  const galWallsCeil  = paintSqft / 350 * 2;
+  const galTrim       = scope.has('trim') ? totalTrimLf / 200 : 0;
+  const galDoors      = scope.has('doors') ? doorCount * 0.25 : 0;
+  const galCabinets   = scope.has('cabinets') ? rooms.length * 1.0 : 0;
+  const gallons       = Math.ceil(galWallsCeil + galTrim + galDoors + galCabinets);
+  const paintCost     = matsIncluded ? Math.round(gallons * 50 * 1.18) : 0;
 
+  // Primer
+  const primerGallons   = primerMode !== 'none' ? Math.ceil(paintSqft / 350) : 0;
+  const primerPriceGal  = primerMode === 'tinted' ? 25 : 20;
+  const primerCost      = matsIncluded && primerMode !== 'none' ? Math.round(primerGallons * primerPriceGal * 1.18) : 0;
+
+  const mats  = paintCost + primerCost;
+  const total = labor + mats + supplies;
+
+  // Display
   document.getElementById('rTotalSqft').textContent = (scope.has('walls') ? totalWallSqft : 0) + (totalCeilSqft ? ' + ' + totalCeilSqft + ' ceil' : '') + ' sq ft';
   document.getElementById('rHours').textContent = hrsTotal.toFixed(1) + ' hrs';
   document.getElementById('rLabor').textContent = '$' + labor.toLocaleString();
@@ -299,42 +314,34 @@ function calc() {
   document.getElementById('rTotal').textContent = '$' + total.toLocaleString();
   document.getElementById('rRange').textContent = 'Диапазон: $' + Math.round(total*0.9).toLocaleString() + ' – $' + Math.round(total*1.1).toLocaleString();
 
+  // Breakdown
   let rows = '';
-  if (scope.has('walls') && totalWallSqft) rows += row('Стены (' + totalWallSqft + ' sqft)', Math.round(hrsWalls*complexity*prepMult*hourly));
-  if (scope.has('ceiling') && totalCeilSqft) rows += row('Потолки (' + totalCeilSqft + ' sqft)', Math.round(hrsCeil*complexity*prepMult*hourly));
-  if (scope.has('trim') && totalTrimLf) rows += row('Trim (' + totalTrimLf + ' lf)', Math.round(hrsTrim*complexity*prepMult*hourly));
-  if (scope.has('doors') && doorCount) rows += row('Двери (' + doorCount + ' шт)', Math.round(hrsDoors*complexity*hourly));
-  if (scope.has('cabinets') && cabinetMult) rows += row('Шкафы / кухня', Math.round(hrsCabinets*complexity*hourly));
-  rows += row('Подготовка / уборка (' + rooms.length + ' комн × 1.25h)', Math.round(hrsPrep*hourly));
+  const R = (label, val) => '<div class="breakdown-row"><span>' + label + '</span><span>$' + Math.round(val).toLocaleString() + '</span></div>';
+  if (scope.has('walls') && totalWallSqft) rows += R('Стены (' + totalWallSqft + ' sqft)', hrsWalls * complexity * prepMult * hourly);
+  if (scope.has('ceiling') && totalCeilSqft) rows += R('Потолки (' + totalCeilSqft + ' sqft)', hrsCeil * complexity * prepMult * hourly);
+  if (scope.has('trim') && totalTrimLf) rows += R('Trim (' + totalTrimLf + ' lf)', hrsTrim * complexity * prepMult * hourly);
+  if (scope.has('doors') && doorCount) rows += R('Двери (' + doorCount + ' шт)', hrsDoors * complexity * hourly);
+  if (scope.has('cabinets') && cabinetMult) rows += R('Шкафы / кухня', hrsCabinets * complexity * hourly);
+  if (primerMode !== 'none') rows += R('Нанесение грунтовки (' + hrsPrimer.toFixed(1) + ' hrs)', hrsPrimer * complexity * prepMult * hourly);
+  rows += R('Подготовка / уборка (' + rooms.length + ' комн × 1.25h)', hrsPrep * hourly);
   if (matsIncluded) {
-    let galDesc = gallons + ' gal';
     let parts = [];
     if (scope.has('walls') || scope.has('ceiling')) parts.push('стены/потолки');
     if (scope.has('trim') && totalTrimLf) parts.push('trim');
     if (scope.has('doors') && doorCount) parts.push('двери');
     if (scope.has('cabinets') && cabinetMult) parts.push('шкафы');
-    rows += row('Краска (' + galDesc + ' — ' + parts.join(', ') + ')', Math.round(gallons * 50 * 1.18));
+    rows += R('Краска (' + gallons + ' gal — ' + (parts.join(', ') || '—') + ')', paintCost);
     if (primerMode !== 'none') {
-      const primerLabel = primerMode === 'tinted' ? 'Tinted primer' : 'Primer';
-      rows += row(primerLabel + ' (' + primerGallons + ' gal × $' + primerPricePerGal + ')', primerCost);
+      rows += R((primerMode === 'tinted' ? 'Tinted primer' : 'Primer') + ' (' + primerGallons + ' gal × $' + primerPriceGal + ')', primerCost);
     }
-  if (primerMode !== 'none') {
-    rows += row('Нанесение грунтовки (' + hrsPrimer.toFixed(1) + ' hrs)', Math.round(hrsPrimer * complexity * prepMult * hourly));
   }
-  }
-  if (supplies) rows += row('Расходники (tape, валики, кисти...)', supplies);
+  if (supplies) rows += R('Расходники (tape, валики, кисти...)', supplies);
   document.getElementById('breakdownRows').innerHTML = rows || '<div class="breakdown-row"><span style="color:var(--muted)">Выбери параметры выше</span></div>';
 
   return total;
 }
 
-function row(label, val) {
-  return '<div class="breakdown-row"><span>' + label + '</span><span>$' + val.toLocaleString() + '</span></div>';
-}
-
-const API = 'https://script.google.com/macros/s/AKfycbxDQihFRr3kaXk7oxdmEAqgiMDAQFS9Y77D6G9EabfTXyhTxfThZhg4NAxEm-eZv5aI/exec';
-let projectsCache = [];
-
+// --- Toast ---
 function showToast(msg, color) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -343,20 +350,16 @@ function showToast(msg, color) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-function setLoading(on) {
-  document.getElementById('projectList').style.opacity = on ? '0.4' : '1';
-}
-
+// --- Google Sheets API ---
 async function loadProjects() {
-  setLoading(true);
   try {
     const r = await fetch(API + '?action=load');
     projectsCache = await r.json();
+    if (!Array.isArray(projectsCache)) projectsCache = [];
   } catch(e) {
-    showToast('Нет соединения', '#f87171');
     projectsCache = [];
+    showToast('Нет соединения', '#f87171');
   }
-  setLoading(false);
   renderProjects();
 }
 
@@ -367,9 +370,7 @@ async function saveProject(forceNew) {
   const state = {
     rooms: JSON.parse(JSON.stringify(rooms)),
     scope: Array.from(scope),
-    prepMult,
-    matsIncluded,
-    primerMode,
+    prepMult, matsIncluded, primerMode,
     hourlyRate: document.getElementById('hourlyRate').value,
     supplies: document.getElementById('suppliesCost').value,
     complexity: document.getElementById('complexity').value,
@@ -377,18 +378,13 @@ async function saveProject(forceNew) {
   };
   const id = (!forceNew && currentProjectId) ? currentProjectId : Date.now().toString();
   const entry = { id, name, date: new Date().toLocaleDateString('ru'), state };
-
   showToast('Сохраняю...');
   try {
-    const url = API + '?action=save&project=' + encodeURIComponent(JSON.stringify(entry));
-    await fetch(url);
+    await fetch(API + '?action=save&project=' + encodeURIComponent(JSON.stringify(entry)));
     currentProjectId = id;
     await loadProjects();
     showToast(forceNew ? 'Новый проект сохранён ✓' : 'Обновлено: ' + name + ' ✓');
-    if (forceNew) {
-      currentProjectId = null;
-      document.getElementById('projectName').value = '';
-    }
+    if (forceNew) { currentProjectId = null; document.getElementById('projectName').value = ''; }
   } catch(e) {
     showToast('Ошибка сохранения', '#f87171');
   }
@@ -402,24 +398,19 @@ function loadProject(id) {
   scope = new Set(s.scope);
   prepMult = s.prepMult;
   matsIncluded = s.matsIncluded;
+  primerMode = s.primerMode || 'tinted';
   currentProjectId = id;
   document.getElementById('projectName').value = p.name;
   document.getElementById('hourlyRate').value = s.hourlyRate;
   document.getElementById('suppliesCost').value = s.supplies;
   document.getElementById('complexity').value = s.complexity;
 
-  primerMode = s.primerMode || 'tinted';
-  document.querySelectorAll('#scopeToggles .toggle').forEach(t => {
-    t.classList.toggle('active', scope.has(t.dataset.val));
-  });
+  document.querySelectorAll('#scopeToggles .toggle').forEach(t => t.classList.toggle('active', scope.has(t.dataset.val)));
+  document.querySelectorAll('#prepToggles .toggle').forEach(t => t.classList.toggle('active', parseFloat(t.dataset.mult) === prepMult));
+  document.querySelectorAll('#matToggles .toggle').forEach(t => t.classList.toggle('active', (t.dataset.val === 'included') === matsIncluded));
   document.querySelectorAll('#primerToggles .toggle').forEach(t => {
-    t.classList.toggle('active', t.dataset.val === primerMode);
-  });
-  document.querySelectorAll('#prepToggles .toggle').forEach(t => {
-    t.classList.toggle('active', parseFloat(t.dataset.mult) === prepMult);
-  });
-  document.querySelectorAll('#matToggles .toggle').forEach(t => {
-    t.classList.toggle('active', (t.dataset.val === 'included') === matsIncluded);
+    t.classList.remove('active'); t.classList.remove('primer-active');
+    if (t.dataset.val === primerMode) { primerMode === 'none' ? t.classList.add('active') : t.classList.add('primer-active'); }
   });
 
   renderRooms();
@@ -441,32 +432,22 @@ async function deleteProject(id, e) {
   }
 }
 
-function togglePrimer(el) {
-  document.querySelectorAll('#primerToggles .toggle').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  primerMode = el.dataset.val;
-  const note = document.getElementById('primerNote');
-  if (primerMode === 'none') note.textContent = 'Краска в 2 слоя без грунтовки';
-  else if (primerMode === 'tinted') note.textContent = 'Рекомендуется при переходе с тёмного в светлый — дешевле краски (~$25/gal)';
-  else note.textContent = 'Стандартный белый primer (~$20/gal)';
-  calc();
-}
-
 function newProject() {
   rooms = [{ name: 'Гостиная', l: 16, w: 14, h: 9 }, { name: 'Спальня', l: 12, w: 11, h: 9 }];
   scope = new Set(['walls']);
-  prepMult = 1.0;
-  matsIncluded = true;
+  prepMult = 1.0; matsIncluded = true; primerMode = 'tinted';
   currentProjectId = null;
   document.getElementById('projectName').value = '';
   document.getElementById('hourlyRate').value = '65';
   document.getElementById('suppliesCost').value = '175';
   document.getElementById('complexity').value = '1.0';
-  primerMode = 'tinted';
   document.querySelectorAll('#scopeToggles .toggle').forEach(t => t.classList.toggle('active', t.dataset.val === 'walls'));
-  document.querySelectorAll('#primerToggles .toggle').forEach(t => t.classList.toggle('active', t.dataset.val === 'tinted'));
   document.querySelectorAll('#prepToggles .toggle').forEach((t,i) => t.classList.toggle('active', i === 0));
   document.querySelectorAll('#matToggles .toggle').forEach((t,i) => t.classList.toggle('active', i === 1));
+  document.querySelectorAll('#primerToggles .toggle').forEach(t => {
+    t.classList.remove('active'); t.classList.remove('primer-active');
+    if (t.dataset.val === 'tinted') t.classList.add('primer-active');
+  });
   renderRooms();
   renderProjects();
   window.scrollTo(0, 0);
@@ -478,15 +459,16 @@ function renderProjects() {
     el.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">Нет сохранённых проектов</div>';
     return;
   }
-  el.innerHTML = projectsCache.map(p => `
-    <div class="project-item ${p.id === currentProjectId ? 'current' : ''}" onclick="loadProject('${p.id}')">
-      <div class="proj-info">
-        <div class="proj-name">${p.name}</div>
-        <div class="proj-meta">${p.date}</div>
-      </div>
-      <div class="proj-total">$${p.state.total.toLocaleString()}</div>
-      <button class="btn-del" onclick="deleteProject('${p.id}',event)">×</button>
-    </div>`).join('');
+  el.innerHTML = projectsCache.map(p =>
+    '<div class="project-item ' + (p.id === currentProjectId ? 'current' : '') + '" onclick="loadProject(\'' + p.id + '\')">' +
+      '<div class="proj-info">' +
+        '<div class="proj-name">' + p.name + '</div>' +
+        '<div class="proj-meta">' + p.date + '</div>' +
+      '</div>' +
+      '<div class="proj-total">$' + p.state.total.toLocaleString() + '</div>' +
+      '<button class="btn-del" onclick="deleteProject(\'' + p.id + '\',event)">×</button>' +
+    '</div>'
+  ).join('');
 }
 
 renderRooms();
