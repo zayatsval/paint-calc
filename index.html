@@ -63,6 +63,8 @@
   .btn-save-new { background:none; border:1px solid var(--accent); border-radius:4px; color:var(--accent); cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; padding:9px; width:100%; margin-top:8px; }
   .btn-new { background:none; border:1px solid var(--border); border-radius:4px; color:var(--muted); cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; padding:9px; width:100%; margin-top:8px; }
   .primer-note { font-size:10px; color:#7dd3fc; margin-top:6px; }
+  .btn-report { background:none; border:1px solid var(--border); border-radius:6px; color:var(--muted); cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; padding:10px; width:100%; margin-bottom:14px; transition:all 0.15s; }
+  .btn-report:active { border-color:var(--accent); color:var(--accent); }
   .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--green); color:#000; font-family:'Syne',sans-serif; font-size:12px; font-weight:700; padding:10px 22px; border-radius:20px; opacity:0; transition:opacity 0.3s; pointer-events:none; z-index:999; white-space:nowrap; }
   .toast.show { opacity:1; }
   .note { font-size:10px; color:var(--muted); line-height:1.7; }
@@ -192,6 +194,21 @@
     <div class="result-total-value" id="rTotal">$—</div>
   </div>
   <div class="result-range" id="rRange"></div>
+</div>
+
+<!-- REPORT BUTTON -->
+<button class="btn-report" onclick="showReport()">📋 Сгенерировать отчёт для клиента</button>
+
+<!-- REPORT MODAL -->
+<div id="reportModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:100;padding:20px;overflow-y:auto">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;max-width:500px;margin:0 auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <span style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent)">ОТЧЁТ</span>
+      <button onclick="closeReport()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">×</button>
+    </div>
+    <textarea id="reportText" style="width:100%;height:320px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:12px;outline:none;resize:none;line-height:1.6"></textarea>
+    <button onclick="copyReport()" class="btn-save" style="width:100%;margin-top:10px;padding:12px">Скопировать текст</button>
+  </div>
 </div>
 
 <!-- BREAKDOWN -->
@@ -521,6 +538,100 @@ function renderProjects() {
       '<button class="btn-del" onclick="deleteProject(\'' + p.id + '\',event)">×</button>' +
     '</div>'
   ).join('');
+}
+
+function showReport() {
+  const hourly = parseFloat(document.getElementById('hourlyRate').value) || 65;
+  const complexity = parseFloat(document.getElementById('complexity').value) || 1.0;
+  const supplies = parseFloat(document.getElementById('suppliesCost').value) || 0;
+  const clientName = document.getElementById('projectName').value.trim() || 'Клиент';
+
+  const totalWallSqft = rooms.reduce((s, r) => s + sqftRoom(r), 0);
+  const totalCeilSqft = scope.has('ceiling') ? rooms.reduce((s, r) => s + r.l * r.w, 0) : 0;
+  const totalTrimLf   = scope.has('trim') ? rooms.reduce((s, r) => s + 2 * (r.l + r.w), 0) : 0;
+  const doorCount     = scope.has('doors') ? rooms.length : 0;
+  const cabinetMult   = scope.has('cabinets') ? 1 : 0;
+  const paintSqft     = (scope.has('walls') ? totalWallSqft : 0) + totalCeilSqft;
+
+  const hrsWalls    = scope.has('walls') ? totalWallSqft / 240 * coatsWalls : 0;
+  const hrsCeil     = totalCeilSqft / 200 * coacsCeil;
+  const hrsTrim     = totalTrimLf / 25;
+  const hrsDoors    = doorCount * 0.75;
+  const hrsCabinets = cabinetMult * rooms.length * 3;
+  const hrsPrep     = rooms.length * 1.25;
+  const hrsPrimer   = primerMode !== 'none' ? paintSqft / 240 : 0;
+  const hrsTotal    = (hrsWalls + hrsCeil + hrsTrim + hrsDoors + hrsCabinets + hrsPrimer) * complexity * prepMult + hrsPrep;
+  const labor       = Math.round(hrsTotal * hourly);
+
+  const galWalls    = scope.has('walls') ? totalWallSqft / 350 * coatsWalls : 0;
+  const galCeil     = totalCeilSqft / 350 * coacsCeil;
+  const galTrim     = scope.has('trim') ? totalTrimLf / 200 * coatsTrim : 0;
+  const galDoors    = scope.has('doors') ? doorCount * 0.25 * coatsTrim : 0;
+  const galCabinets = scope.has('cabinets') ? rooms.length * 1.0 : 0;
+  const gallons     = Math.ceil(galWalls + galCeil + galTrim + galDoors + galCabinets);
+  const paintCost   = matsIncluded ? Math.round(gallons * 50 * 1.18) : 0;
+  const primerSqft  = (scope.has('walls') ? totalWallSqft : 0) + totalCeilSqft;
+  const primerGal   = primerMode !== 'none' ? Math.ceil(primerSqft / 350) : 0;
+  const primerPpg   = primerMode === 'tinted' ? 25 : 20;
+  const primerCost  = matsIncluded && primerMode !== 'none' ? Math.round(primerGal * primerPpg * 1.18) : 0;
+  const mats        = paintCost + primerCost;
+  const total       = labor + mats + supplies;
+  const totalLow    = Math.round(total * 0.9);
+  const totalHigh   = Math.round(total * 1.1);
+
+  const date = new Date().toLocaleDateString('ru');
+  let lines = [];
+  lines.push('MAIV Group LLC — Painting Estimate');
+  lines.push('Date: ' + date);
+  lines.push('Client: ' + clientName);
+  lines.push('');
+  lines.push('SCOPE OF WORK:');
+  rooms.forEach(r => {
+    lines.push('  ' + r.name + ' — ' + r.l + "' × " + r.w + "' × " + r.h + "'  (" + sqftRoom(r) + ' sq ft walls)');
+  });
+  lines.push('');
+  const scopeList = [];
+  if (scope.has('walls')) scopeList.push('Walls (' + coatsWalls + ' coats)');
+  if (scope.has('ceiling')) scopeList.push('Ceiling (' + coacsCeil + ' coat)');
+  if (scope.has('trim')) scopeList.push('Trim/Baseboard (' + coatsTrim + ' coats)');
+  if (scope.has('doors')) scopeList.push('Doors (' + doorCount + ' pcs)');
+  if (scope.has('cabinets')) scopeList.push('Cabinets/Kitchen');
+  if (primerMode !== 'none') scopeList.push(primerMode === 'tinted' ? 'Tinted primer (1 coat)' : 'Primer (1 coat)');
+  lines.push('Items: ' + scopeList.join(', '));
+  lines.push('');
+  lines.push('ESTIMATE:');
+  lines.push('  Labor:      $' + labor.toLocaleString());
+  if (matsIncluded) {
+    lines.push('  Paint:      $' + paintCost.toLocaleString() + ' (' + gallons + ' gal)');
+    if (primerMode !== 'none') lines.push('  Primer:     $' + primerCost.toLocaleString() + ' (' + primerGal + ' gal)');
+    lines.push('  Supplies:   $' + supplies.toLocaleString());
+  }
+  lines.push('  ─────────────────');
+  lines.push('  TOTAL:      $' + total.toLocaleString());
+  lines.push('  Range:      $' + totalLow.toLocaleString() + ' – $' + totalHigh.toLocaleString());
+  lines.push('');
+  lines.push('Est. time: ' + hrsTotal.toFixed(1) + ' hrs');
+  lines.push('');
+  lines.push('* This is a preliminary estimate.');
+  lines.push('  Final price confirmed after on-site inspection.');
+  lines.push('');
+  lines.push('Val — MAIV Group LLC');
+  lines.push('📞 ');
+
+  document.getElementById('reportText').value = lines.join('
+');
+  document.getElementById('reportModal').style.display = 'block';
+}
+
+function closeReport() {
+  document.getElementById('reportModal').style.display = 'none';
+}
+
+function copyReport() {
+  const ta = document.getElementById('reportText');
+  ta.select();
+  document.execCommand('copy');
+  showToast('Скопировано ✓');
 }
 
 renderRooms();
