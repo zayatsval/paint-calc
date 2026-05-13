@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painting Estimate</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0f0f0f; --surface:#1a1a1a; --border:#2a2a2a; --accent:#e8c547; --accent2:#ff6b35; --text:#f0f0f0; --muted:#666; --green:#4ade80; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:'DM Mono',monospace; min-height:100vh; padding:24px 16px 50px; }
+  h1 { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:var(--accent); margin-bottom:4px; }
+  .subtitle { font-size:11px; color:var(--muted); margin-bottom:20px; letter-spacing:1px; text-transform:uppercase; }
+  .section { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:14px; }
+  .section-title { font-family:'Syne',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--accent); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+  .sub-title { font-family:'Syne',sans-serif; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin:12px 0 8px; }
+  .row { display:flex; gap:10px; margin-bottom:10px; align-items:center; }
+  label { font-size:11px; color:var(--muted); min-width:110px; }
+  input[type=text], input[type=tel], select { background:var(--bg); border:1px solid var(--border); border-radius:4px; color:var(--text); font-family:'DM Mono',monospace; font-size:14px; padding:8px 10px; flex:1; outline:none; transition:border-color 0.2s; -webkit-appearance:none; appearance:none; }
+  input[type=text]:focus, input[type=tel]:focus, select:focus { border-color:var(--accent); }
+  .toggle-row { display:flex; gap:6px; flex-wrap:wrap; }
+  .toggle { padding:7px 12px; border:1px solid var(--border); border-radius:4px; font-family:'DM Mono',monospace; font-size:11px; cursor:pointer; background:var(--bg); color:var(--muted); transition:all 0.15s; user-select:none; }
+  .toggle.active { border-color:var(--accent); color:var(--accent); background:rgba(232,197,71,0.08); }
+  .toggle.primer-active { border-color:#7dd3fc; color:#7dd3fc; background:rgba(125,211,252,0.08); }
+  .rooms-list { display:flex; flex-direction:column; gap:10px; }
+  .room-item { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:10px; }
+  .room-name-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .room-name-inp { background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--accent); font-family:'Syne',sans-serif; font-size:13px; font-weight:700; flex:1; outline:none; padding:2px 0; }
+  .room-dims { display:flex; gap:8px; }
+  .dim-block { flex:1; }
+  .dim-label { font-size:9px; color:var(--muted); margin-bottom:3px; }
+  .dim-inp { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:4px; color:var(--text); font-family:'DM Mono',monospace; font-size:15px; padding:8px 4px; outline:none; text-align:center; -webkit-appearance:none; }
+  .dim-inp:focus { border-color:var(--accent); }
+  .room-sqft-row { display:flex; justify-content:space-between; align-items:center; margin-top:8px; }
+  .room-sqft { font-size:12px; color:var(--accent2); }
+  .btn-remove { background:none; border:none; color:var(--muted); cursor:pointer; font-size:20px; padding:0; line-height:1; }
+  .btn-add { background:none; border:1px dashed var(--border); border-radius:6px; color:var(--muted); cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; padding:10px; width:100%; margin-top:8px; }
+  .result-box { background:linear-gradient(135deg,#1a1a0f,#1a1209); border:1px solid var(--accent); border-radius:8px; padding:20px; margin-bottom:14px; }
+  .result-line { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:7px; }
+  .result-line span:last-child { color:var(--text); }
+  .result-divider { border:none; border-top:1px solid var(--border); margin:12px 0; }
+  .result-total { display:flex; justify-content:space-between; align-items:baseline; }
+  .result-total-label { font-family:'Syne',sans-serif; font-size:13px; color:var(--muted); }
+  .result-total-value { font-family:'Syne',sans-serif; font-size:32px; font-weight:800; color:var(--accent); }
+  .result-range { font-size:11px; color:var(--muted); text-align:right; margin-top:6px; }
+  .breakdown { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin-bottom:14px; }
+  .breakdown-row { display:flex; justify-content:space-between; font-size:11px; padding:5px 0; border-bottom:1px solid var(--border); }
+  .breakdown-row:last-child { border-bottom:none; }
+  .breakdown-row span:first-child { color:var(--muted); }
+  .project-list { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+  .project-item { display:flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:10px 12px; cursor:pointer; }
+  .project-item.current { border-color:var(--accent); }
+  .proj-info { flex:1; }
+  .proj-name { font-size:12px; color:var(--text); }
+  .proj-meta { font-size:9px; color:var(--muted); margin-top:2px; }
+  .proj-total { font-size:13px; color:var(--accent); font-family:'Syne',sans-serif; font-weight:700; white-space:nowrap; }
+  .btn-del { background:none; border:none; color:var(--muted); cursor:pointer; font-size:18px; padding:0 4px; }
+  .save-row { display:flex; gap:8px; }
+  .save-inp { flex:1; background:var(--bg); border:1px solid var(--border); border-radius:4px; color:var(--text); font-family:'DM Mono',monospace; font-size:13px; padding:9px 10px; outline:none; }
+  .save-inp:focus { border-color:var(--accent); }
+  .btn-save { background:var(--accent); border:none; border-radius:4px; color:#000; cursor:pointer; font-family:'Syne',sans-serif; font-size:12px; font-weight:700; padding:9px 16px; white-space:nowrap; }
+  .btn-save-new { background:none; border:1px solid var(--accent); border-radius:4px; color:var(--accent); cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; padding:9px; width:100%; margin-top:8px; }
+  .btn-new { background:none; border:1px solid var(--border); border-radius:4px; color:var(--muted); cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; padding:9px; width:100%; margin-top:8px; }
+  .btn-report { background:none; border:1px solid #7dd3fc; border-radius:6px; color:#7dd3fc; cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; padding:11px; width:100%; margin-bottom:14px; }
+  .primer-note { font-size:10px; color:#7dd3fc; margin-top:6px; }
+  .modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.88); z-index:100; padding:20px; overflow-y:auto; }
+  .modal-box { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px; max-width:500px; margin:0 auto; }
+  .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .modal-title { font-family:'Syne',sans-serif; font-size:14px; font-weight:700; color:var(--accent); }
+  .btn-close { background:none; border:none; color:var(--muted); font-size:24px; cursor:pointer; }
+  .report-area { width:100%; height:340px; background:var(--bg); border:1px solid var(--border); border-radius:4px; color:var(--text); font-family:'DM Mono',monospace; font-size:12px; padding:12px; outline:none; resize:none; line-height:1.7; }
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--green); color:#000; font-family:'Syne',sans-serif; font-size:12px; font-weight:700; padding:10px 22px; border-radius:20px; opacity:0; transition:opacity 0.3s; pointer-events:none; z-index:999; white-space:nowrap; }
+  .toast.show { opacity:1; }
+  .note { font-size:10px; color:var(--muted); line-height:1.7; }
+</style>
+</head>
+<body>
+
+<h1>🖌 PAINT ESTIMATE</h1>
+<div class="subtitle">Interior · Sarasota FL · 2026</div>
+
+<!-- PROJECTS -->
+<div class="section">
+  <div class="section-title">Projects</div>
+  <div class="project-list" id="projectList"><div style="font-size:11px;color:var(--muted);padding:4px 0">Loading...</div></div>
+  <div class="save-row">
+    <input type="text" class="save-inp" id="projectName" placeholder="Client name / address...">
+    <button class="btn-save" onclick="saveProject(false)">Сохранить</button>
+  </div>
+  <button class="btn-save-new" onclick="saveProject(true)">+ Save as new project</button>
+  <button class="btn-new" onclick="newProject()">↺ Reset all</button>
+</div>
+
+<!-- ROOMS -->
+<div class="section">
+  <div class="section-title">Rooms</div>
+  <div class="rooms-list" id="roomsList"></div>
+  <button class="btn-add" onclick="addRoom()">+ Add room</button>
+</div>
+
+<!-- SCOPE -->
+<div class="section">
+  <div class="section-title">Scope of work</div>
+  <div class="toggle-row" id="scopeToggles">
+    <div class="toggle active" data-val="walls" onclick="toggleScope(this)">Walls</div>
+    <div class="toggle" data-val="ceiling" onclick="toggleScope(this)">Ceiling</div>
+    <div class="toggle" data-val="trim" onclick="toggleScope(this)">Baseboard / Trim</div>
+    <div class="toggle" data-val="doors" onclick="toggleScope(this)">Doors</div>
+    <div class="toggle" data-val="cabinets" onclick="toggleScope(this)">Cabinets / Kitchen</div>
+  </div>
+  <div class="sub-title">Primer</div>
+  <div class="toggle-row" id="primerToggles">
+    <div class="toggle" data-val="none" onclick="togglePrimer(this)">No primer</div>
+    <div class="toggle primer-active" data-val="tinted" onclick="togglePrimer(this)">Tinted primer</div>
+    <div class="toggle" data-val="regular" onclick="togglePrimer(this)">Regular primer</div>
+  </div>
+  <div class="primer-note" id="primerNote">Tinted primer — recommended when going from dark to light (~$25/gal)</div>
+</div>
+
+<!-- PREP -->
+<div class="section">
+  <div class="section-title">Wall preparation</div>
+  <div class="toggle-row" id="prepToggles">
+    <div class="toggle active" data-mult="1.0" onclick="togglePrep(this)">Good condition</div>
+    <div class="toggle" data-mult="1.15" onclick="togglePrep(this)">Minor repairs</div>
+    <div class="toggle" data-mult="1.35" onclick="togglePrep(this)">Major prep work</div>
+  </div>
+</div>
+
+<!-- MATERIALS -->
+<div class="section">
+  <div class="section-title">Materials</div>
+  <div class="toggle-row" id="matToggles">
+    <div class="toggle" data-val="client" onclick="toggleMat(this)">Client buys paint</div>
+    <div class="toggle active" data-val="included" onclick="toggleMat(this)">I supply materials</div>
+  </div>
+  <div class="sub-title">Paint coats</div>
+  <div class="row" style="margin-bottom:8px">
+    <label>Walls</label>
+    <div class="toggle-row" id="coatsWalls">
+      <div class="toggle" data-val="1" onclick="toggleCoat('coatsWalls',this)">1</div>
+      <div class="toggle active" data-val="2" onclick="toggleCoat('coatsWalls',this)">2</div>
+      <div class="toggle" data-val="3" onclick="toggleCoat('coatsWalls',this)">3</div>
+    </div>
+  </div>
+  <div class="row" style="margin-bottom:8px">
+    <label>Ceiling</label>
+    <div class="toggle-row" id="coacsCeil">
+      <div class="toggle active" data-val="1" onclick="toggleCoat('coacsCeil',this)">1</div>
+      <div class="toggle" data-val="2" onclick="toggleCoat('coacsCeil',this)">2</div>
+    </div>
+  </div>
+  <div class="row" style="margin-bottom:12px">
+    <label>Trim / Doors</label>
+    <div class="toggle-row" id="coatsTrim">
+      <div class="toggle" data-val="1" onclick="toggleCoat('coatsTrim',this)">1</div>
+      <div class="toggle active" data-val="2" onclick="toggleCoat('coatsTrim',this)">2</div>
+    </div>
+  </div>
+  <div class="row">
+    <label>Supplies ($)</label>
+    <input type="tel" id="suppliesCost" value="175" placeholder="175" onblur="calc()">
+  </div>
+  <div style="font-size:10px;color:var(--muted);margin-top:2px">tape, plastic, rollers, brushes, trays, bags</div>
+</div>
+
+<!-- RATE -->
+<div class="section">
+  <div class="section-title">My rate</div>
+  <div class="row">
+    <label>$/час</label>
+    <input type="tel" id="hourlyRate" value="65" placeholder="65" onblur="calc()">
+  </div>
+  <div class="row">
+    <label>Complexity</label>
+    <select id="complexity" onchange="calc()">
+      <option value="1.0">Standard</option>
+      <option value="1.2">High ceilings</option>
+      <option value="1.4">Complex geometry</option>
+    </select>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div class="result-box">
+  <div class="result-line"><span>Wall area</span><span id="rTotalSqft">—</span></div>
+  <div class="result-line"><span>Estimated time</span><span id="rHours">—</span></div>
+  <div class="result-line"><span>Labor</span><span id="rLabor">$—</span></div>
+  <div class="result-line" id="rMatsRow"><span>Materials</span><span id="rMats">$—</span></div>
+  <div class="result-line"><span>Supplies</span><span id="rSupplies">$—</span></div>
+  <hr class="result-divider">
+  <div class="result-total">
+    <div class="result-total-label">ИТОГО</div>
+    <div class="result-total-value" id="rTotal">$—</div>
+  </div>
+  <div class="result-range" id="rRange"></div>
+</div>
+
+<!-- REPORT -->
+<button class="btn-report" onclick="showReport()">📋 Generate client report</button>
+
+<!-- BREAKDOWN -->
+<div class="breakdown">
+  <div class="section-title" style="margin-bottom:10px">Breakdown</div>
+  <div id="breakdownRows"></div>
+</div>
+
+<div class="note">
+  ⚡ Rate $65–$75/hr — standard for handyman in Sarasota.<br>
+  💡 Materials включают наценку 18% за закупку.<br>
+  📋 Give client a range, not a fixed number.
+</div>
+
+<!-- REPORT MODAL -->
+<div class="modal" id="reportModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">📋 CLIENT REPORT</div>
+      <button class="btn-close" onclick="closeReport()">×</button>
+    </div>
+    <textarea class="report-area" id="reportText"></textarea>
+    <button class="btn-save" style="width:100%;margin-top:10px;padding:12px" onclick="copyReport()">Copy to clipboard</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var API = 'https://script.google.com/macros/s/AKfycbxDQihFRr3kaXk7oxdmEAqgiMDAQFS9Y77D6G9EabfTXyhTxfThZhg4NAxEm-eZv5aI/exec';
+
+var rooms = [{name:'Living Room',l:16,w:14,h:9},{name:'Bedroom',l:12,w:11,h:9}];
+var scope = new Set(['walls']);
+var prepMult = 1.0;
+var matsIncluded = true;
+var primerMode = 'tinted';
+var coatsWalls = 2;
+var coacsCeil = 1;
+var coatsTrim = 2;
+var currentProjectId = null;
+var projectsCache = [];
+
+document.addEventListener('focusin', function(e) {
+  if (e.target.type === 'tel' || e.target.classList.contains('dim-inp')) {
+    setTimeout(function(){ e.target.select(); }, 0);
+  }
+});
+
+function sqftRoom(r) { return Math.round(2 * (r.l + r.w) * r.h * 0.85); }
+
+function renderRooms() {
+  var el = document.getElementById('roomsList');
+  el.innerHTML = '';
+  rooms.forEach(function(r, i) {
+    var sq = sqftRoom(r);
+    var div = document.createElement('div');
+    div.className = 'room-item';
+    div.innerHTML =
+      '<div class="room-name-row">' +
+        '<input class="room-name-inp" type="text" value="' + r.name + '" placeholder="Название" onchange="rooms[' + i + '].name=this.value;calc()">' +
+        '<button class="btn-remove" onclick="removeRoom(' + i + ')">x</button>' +
+      '</div>' +
+      '<div class="room-dims">' +
+        '<div class="dim-block"><div class="dim-label">LENGTH (ft)</div><input class="dim-inp" type="tel" value="' + r.l + '" onblur="updateDim(' + i + ',\'l\',this.value)"></div>' +
+        '<div class="dim-block"><div class="dim-label">WIDTH (ft)</div><input class="dim-inp" type="tel" value="' + r.w + '" onblur="updateDim(' + i + ',\'w\',this.value)"></div>' +
+        '<div class="dim-block"><div class="dim-label">HEIGHT (ft)</div><input class="dim-inp" type="tel" value="' + r.h + '" onblur="updateDim(' + i + ',\'h\',this.value)"></div>' +
+      '</div>' +
+      '<div class="room-sqft-row"><span style="font-size:10px;color:var(--muted)">walls</span><span class="room-sqft">' + sq + ' sq ft</span></div>';
+    el.appendChild(div);
+  });
+  calc();
+}
+
+function updateDim(i, key, val) {
+  var n = parseFloat(val);
+  if (!isNaN(n) && n > 0) rooms[i][key] = n;
+  renderRooms();
+}
+function addRoom() { rooms.push({name:'Room',l:12,w:10,h:9}); renderRooms(); }
+function removeRoom(i) { rooms.splice(i,1); renderRooms(); }
+
+function toggleScope(el) {
+  var v = el.dataset.val;
+  if (scope.has(v)) { scope.delete(v); el.classList.remove('active'); }
+  else { scope.add(v); el.classList.add('active'); }
+  calc();
+}
+function togglePrep(el) {
+  document.querySelectorAll('#prepToggles .toggle').forEach(function(t){ t.classList.remove('active'); });
+  el.classList.add('active');
+  prepMult = parseFloat(el.dataset.mult);
+  calc();
+}
+function toggleMat(el) {
+  document.querySelectorAll('#matToggles .toggle').forEach(function(t){ t.classList.remove('active'); });
+  el.classList.add('active');
+  matsIncluded = el.dataset.val === 'included';
+  calc();
+}
+function togglePrimer(el) {
+  document.querySelectorAll('#primerToggles .toggle').forEach(function(t){ t.classList.remove('active'); t.classList.remove('primer-active'); });
+  primerMode = el.dataset.val;
+  if (primerMode !== 'none') el.classList.add('primer-active');
+  else el.classList.add('active');
+  var note = document.getElementById('primerNote');
+  if (primerMode === 'none') note.textContent = 'Paint only, no primer';
+  else if (primerMode === 'tinted') note.textContent = 'Tinted primer — recommended when going from dark to light (~$25/gal)';
+  else note.textContent = 'Standard white primer (~$20/gal)';
+  calc();
+}
+function toggleCoat(groupId, el) {
+  document.querySelectorAll('#' + groupId + ' .toggle').forEach(function(t){ t.classList.remove('active'); });
+  el.classList.add('active');
+  var val = parseInt(el.dataset.val);
+  if (groupId === 'coatsWalls') coatsWalls = val;
+  else if (groupId === 'coacsCeil') coacsCeil = val;
+  else if (groupId === 'coatsTrim') coatsTrim = val;
+  calc();
+}
+
+function getCalcData() {
+  var hourly = parseFloat(document.getElementById('hourlyRate').value) || 65;
+  var complexity = parseFloat(document.getElementById('complexity').value) || 1.0;
+  var supplies = parseFloat(document.getElementById('suppliesCost').value) || 0;
+  var totalWallSqft = rooms.reduce(function(s,r){ return s + sqftRoom(r); }, 0);
+  var totalCeilSqft = scope.has('ceiling') ? rooms.reduce(function(s,r){ return s + r.l*r.w; }, 0) : 0;
+  var totalTrimLf = scope.has('trim') ? rooms.reduce(function(s,r){ return s + 2*(r.l+r.w); }, 0) : 0;
+  var doorCount = scope.has('doors') ? rooms.length : 0;
+  var cabinetMult = scope.has('cabinets') ? 1 : 0;
+  var paintSqft = (scope.has('walls') ? totalWallSqft : 0) + totalCeilSqft;
+
+  var hrsWalls = scope.has('walls') ? totalWallSqft / 240 * coatsWalls : 0;
+  var hrsCeil = totalCeilSqft / 200 * coacsCeil;
+  var hrsTrim = totalTrimLf / 25;
+  var hrsDoors = doorCount * 0.75;
+  var hrsCabinets = cabinetMult * rooms.length * 3;
+  var hrsPrep = rooms.length * 1.25;
+  var hrsPrimer = primerMode !== 'none' ? paintSqft / 240 : 0;
+  var hrsTotal = (hrsWalls + hrsCeil + hrsTrim + hrsDoors + hrsCabinets + hrsPrimer) * complexity * prepMult + hrsPrep;
+  var labor = Math.round(hrsTotal * hourly);
+
+  var galWalls = scope.has('walls') ? totalWallSqft / 350 * coatsWalls : 0;
+  var galCeil = totalCeilSqft / 350 * coacsCeil;
+  var galTrim = scope.has('trim') ? totalTrimLf / 200 * coatsTrim : 0;
+  var galDoors = scope.has('doors') ? doorCount * 0.25 * coatsTrim : 0;
+  var galCabinets = scope.has('cabinets') ? rooms.length * 1.0 : 0;
+  var gallons = Math.ceil(galWalls + galCeil + galTrim + galDoors + galCabinets);
+  var paintCost = matsIncluded ? Math.round(gallons * 50 * 1.18) : 0;
+
+  var primerSqft = (scope.has('walls') ? totalWallSqft : 0) + totalCeilSqft;
+  var primerGallons = primerMode !== 'none' ? Math.ceil(primerSqft / 350) : 0;
+  var primerPpg = primerMode === 'tinted' ? 25 : 20;
+  var primerCost = (matsIncluded && primerMode !== 'none') ? Math.round(primerGallons * primerPpg * 1.18) : 0;
+
+  var mats = paintCost + primerCost;
+  var total = labor + mats + supplies;
+
+  return {
+    hourly:hourly, complexity:complexity, supplies:supplies,
+    totalWallSqft:totalWallSqft, totalCeilSqft:totalCeilSqft,
+    totalTrimLf:totalTrimLf, doorCount:doorCount, cabinetMult:cabinetMult,
+    paintSqft:paintSqft, hrsTotal:hrsTotal, labor:labor,
+    gallons:gallons, paintCost:paintCost,
+    primerGallons:primerGallons, primerPpg:primerPpg, primerCost:primerCost,
+    mats:mats, total:total,
+    hrsWalls:hrsWalls, hrsCeil:hrsCeil, hrsTrim:hrsTrim,
+    hrsDoors:hrsDoors, hrsCabinets:hrsCabinets, hrsPrep:hrsPrep, hrsPrimer:hrsPrimer
+  };
+}
+
+function calc() {
+  var d = getCalcData();
+  document.getElementById('rTotalSqft').textContent =
+    (scope.has('walls') ? d.totalWallSqft : 0) +
+    (d.totalCeilSqft ? ' + ' + d.totalCeilSqft + ' ceil' : '') + ' sq ft';
+  document.getElementById('rHours').textContent = d.hrsTotal.toFixed(1) + ' hrs';
+  document.getElementById('rLabor').textContent = '$' + d.labor.toLocaleString();
+  document.getElementById('rMats').textContent = matsIncluded ? '$' + d.mats.toLocaleString() : 'клиент';
+  document.getElementById('rMatsRow').style.opacity = matsIncluded ? '1' : '0.4';
+  document.getElementById('rSupplies').textContent = '$' + d.supplies.toLocaleString();
+  document.getElementById('rTotal').textContent = '$' + d.total.toLocaleString();
+  document.getElementById('rRange').textContent =
+    'Range: $' + Math.round(d.total*0.9).toLocaleString() + ' - $' + Math.round(d.total*1.1).toLocaleString();
+
+  var rows = '';
+  function R(label, val) { return '<div class="breakdown-row"><span>' + label + '</span><span>$' + Math.round(val).toLocaleString() + '</span></div>'; }
+  if (scope.has('walls') && d.totalWallSqft) rows += R('Walls (' + d.totalWallSqft + ' sqft, ' + coatsWalls + ' coat(s))', d.hrsWalls * d.complexity * prepMult * d.hourly);
+  if (scope.has('ceiling') && d.totalCeilSqft) rows += R('Ceiling (' + d.totalCeilSqft + ' sqft, ' + coacsCeil + ' coat(s))', d.hrsCeil * d.complexity * prepMult * d.hourly);
+  if (scope.has('trim') && d.totalTrimLf) rows += R('Trim (' + d.totalTrimLf + ' lf)', d.hrsTrim * d.complexity * prepMult * d.hourly);
+  if (scope.has('doors') && d.doorCount) rows += R('Doors (' + d.doorCount + ' pcs)', d.hrsDoors * d.complexity * d.hourly);
+  if (scope.has('cabinets') && d.cabinetMult) rows += R('Cabinets / Kitchen', d.hrsCabinets * d.complexity * d.hourly);
+  if (primerMode !== 'none') rows += R('Primer application (' + d.hrsPrimer.toFixed(1) + ' hrs)', d.hrsPrimer * d.complexity * prepMult * d.hourly);
+  rows += R('Prep / cleanup (' + rooms.length + ' rooms x 1.25h)', d.hrsPrep * d.hourly);
+  if (matsIncluded) {
+    var parts = [];
+    if (scope.has('walls') || scope.has('ceiling')) parts.push('walls/потолки');
+    if (scope.has('trim') && d.totalTrimLf) parts.push('trim');
+    if (scope.has('doors') && d.doorCount) parts.push('doors');
+    if (scope.has('cabinets') && d.cabinetMult) parts.push('cabinets');
+    rows += R('Paint (' + d.gallons + ' gal - ' + (parts.join(', ') || '-') + ')', d.paintCost);
+    if (primerMode !== 'none') rows += R((primerMode === 'tinted' ? 'Tinted primer' : 'Primer') + ' (' + d.primerGallons + ' gal x $' + d.primerPpg + ')', d.primerCost);
+  }
+  if (d.supplies) rows += R('Supplies (tape, валики, кисти...)', d.supplies);
+  document.getElementById('breakdownRows').innerHTML = rows || '<div class="breakdown-row"><span style="color:var(--muted)">Выбери параметры выше</span></div>';
+  return d.total;
+}
+
+function showToast(msg, color) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = color || 'var(--green)';
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+
+function showReport() {
+  var d = getCalcData();
+  var clientName = document.getElementById('projectName').value.trim() || 'Client';
+  var date = new Date().toLocaleDateString('en-US');
+  var lines = [];
+  lines.push('MAIV Group LLC - Painting Estimate');
+  lines.push('Date: ' + date);
+  lines.push('Client: ' + clientName);
+  lines.push('');
+  lines.push('ROOMS:');
+  rooms.forEach(function(r) {
+    lines.push('  ' + r.name + ' - ' + r.l + "' x " + r.w + "' x " + r.h + "'  (" + sqftRoom(r) + ' sq ft walls)');
+  });
+  lines.push('');
+  lines.push('SCOPE OF WORK:');
+  if (scope.has('walls')) lines.push('  - Walls: ' + coatsWalls + ' coat(s)');
+  if (scope.has('ceiling')) lines.push('  - Ceiling: ' + coacsCeil + ' coat(s)');
+  if (scope.has('trim')) lines.push('  - Trim/Baseboard: ' + coatsTrim + ' coat(s)');
+  if (scope.has('doors')) lines.push('  - Doors: ' + d.doorCount + ' pcs');
+  if (scope.has('cabinets')) lines.push('  - Cabinets/Kitchen');
+  if (primerMode !== 'none') lines.push('  - ' + (primerMode === 'tinted' ? 'Tinted primer' : 'Primer') + ': 1 coat');
+  lines.push('');
+  lines.push('ESTIMATE:');
+  lines.push('  Labor:       $' + d.labor.toLocaleString());
+  if (matsIncluded) {
+    lines.push('  Paint:       $' + d.paintCost.toLocaleString() + ' (' + d.gallons + ' gal)');
+    if (primerMode !== 'none') lines.push('  Primer:      $' + d.primerCost.toLocaleString() + ' (' + d.primerGallons + ' gal)');
+    lines.push('  Supplies:    $' + d.supplies.toLocaleString());
+  }
+  lines.push('  ----------------------------');
+  lines.push('  TOTAL:       $' + d.total.toLocaleString());
+  lines.push('  Range:       $' + Math.round(d.total*0.9).toLocaleString() + ' - $' + Math.round(d.total*1.1).toLocaleString());
+  lines.push('');
+  lines.push('Est. time: ' + d.hrsTotal.toFixed(1) + ' hrs');
+  lines.push('');
+  lines.push('* Preliminary estimate.');
+  lines.push('  Final price confirmed after on-site inspection.');
+  lines.push('');
+  lines.push('Val - MAIV Group LLC');
+  lines.push('Tel: ');
+  document.getElementById('reportText').value = lines.join('\n');
+  document.getElementById('reportModal').style.display = 'block';
+}
+
+function closeReport() { document.getElementById('reportModal').style.display = 'none'; }
+
+function copyReport() {
+  var ta = document.getElementById('reportText');
+  ta.select();
+  ta.setSelectionRange(0, 99999);
+  try {
+    navigator.clipboard.writeText(ta.value).then(function(){ showToast('Copied'); });
+  } catch(e) {
+    document.execCommand('copy');
+    showToast('Copied');
+  }
+}
+
+async function loadProjects() {
+  try {
+    var r = await fetch(API + '?action=load');
+    projectsCache = await r.json();
+    if (!Array.isArray(projectsCache)) projectsCache = [];
+  } catch(e) {
+    projectsCache = [];
+    showToast('No connection', '#f87171');
+  }
+  renderProjects();
+}
+
+async function saveProject(forceNew) {
+  var name = document.getElementById('projectName').value.trim();
+  if (!name) { showToast('Enter project name', '#f87171'); return; }
+  var total = calc();
+  var state = {
+    rooms: JSON.parse(JSON.stringify(rooms)),
+    scope: Array.from(scope),
+    prepMult: prepMult, matsIncluded: matsIncluded, primerMode: primerMode,
+    coatsWalls: coatsWalls, coacsCeil: coacsCeil, coatsTrim: coatsTrim,
+    hourlyRate: document.getElementById('hourlyRate').value,
+    supplies: document.getElementById('suppliesCost').value,
+    complexity: document.getElementById('complexity').value,
+    total: total
+  };
+  var id = (!forceNew && currentProjectId) ? currentProjectId : Date.now().toString();
+  var entry = {id:id, name:name, date:new Date().toLocaleDateString('ru'), state:state};
+  showToast('Saving...');
+  try {
+    await fetch(API + '?action=save&project=' + encodeURIComponent(JSON.stringify(entry)));
+    currentProjectId = id;
+    await loadProjects();
+    showToast(forceNew ? 'New project saved' : 'Updated: ' + name);
+    if (forceNew) { currentProjectId = null; document.getElementById('projectName').value = ''; }
+  } catch(e) {
+    showToast('Save error', '#f87171');
+  }
+}
+
+function loadProject(id) {
+  var p = projectsCache.find(function(x){ return x.id === id; });
+  if (!p) return;
+  var s = p.state;
+  rooms = JSON.parse(JSON.stringify(s.rooms));
+  scope = new Set(s.scope);
+  prepMult = s.prepMult;
+  matsIncluded = s.matsIncluded;
+  primerMode = s.primerMode || 'tinted';
+  coatsWalls = s.coatsWalls || 2;
+  coacsCeil = s.coacsCeil || 1;
+  coatsTrim = s.coatsTrim || 2;
+  currentProjectId = id;
+  document.getElementById('projectName').value = p.name;
+  document.getElementById('hourlyRate').value = s.hourlyRate;
+  document.getElementById('suppliesCost').value = s.supplies;
+  document.getElementById('complexity').value = s.complexity;
+
+  document.querySelectorAll('#scopeToggles .toggle').forEach(function(t){ t.classList.toggle('active', scope.has(t.dataset.val)); });
+  document.querySelectorAll('#prepToggles .toggle').forEach(function(t){ t.classList.toggle('active', parseFloat(t.dataset.mult) === prepMult); });
+  document.querySelectorAll('#matToggles .toggle').forEach(function(t){ t.classList.toggle('active', (t.dataset.val==='included')===matsIncluded); });
+  document.querySelectorAll('#primerToggles .toggle').forEach(function(t){
+    t.classList.remove('active'); t.classList.remove('primer-active');
+    if (t.dataset.val === primerMode) { primerMode === 'none' ? t.classList.add('active') : t.classList.add('primer-active'); }
+  });
+  document.querySelectorAll('#coatsWalls .toggle').forEach(function(t){ t.classList.toggle('active', parseInt(t.dataset.val)===coatsWalls); });
+  document.querySelectorAll('#coacsCeil .toggle').forEach(function(t){ t.classList.toggle('active', parseInt(t.dataset.val)===coacsCeil); });
+  document.querySelectorAll('#coatsTrim .toggle').forEach(function(t){ t.classList.toggle('active', parseInt(t.dataset.val)===coatsTrim); });
+
+  renderRooms();
+  renderProjects();
+  window.scrollTo(0,0);
+  showToast('Loaded: ' + p.name);
+}
+
+async function deleteProject(id, e) {
+  e.stopPropagation();
+  if (!confirm('Delete this project?')) return;
+  try {
+    await fetch(API + '?action=delete&id=' + encodeURIComponent(id));
+    if (currentProjectId === id) currentProjectId = null;
+    await loadProjects();
+    showToast('Deleted');
+  } catch(e) {
+    showToast('Error', '#f87171');
+  }
+}
+
+function newProject() {
+  rooms = [{name:'Living Room',l:16,w:14,h:9},{name:'Bedroom',l:12,w:11,h:9}];
+  scope = new Set(['walls']);
+  prepMult=1.0; matsIncluded=true; primerMode='tinted'; coatsWalls=2; coacsCeil=1; coatsTrim=2;
+  currentProjectId = null;
+  document.getElementById('projectName').value = '';
+  document.getElementById('hourlyRate').value = '65';
+  document.getElementById('suppliesCost').value = '175';
+  document.getElementById('complexity').value = '1.0';
+  document.querySelectorAll('#scopeToggles .toggle').forEach(function(t){ t.classList.toggle('active', t.dataset.val==='walls'); });
+  document.querySelectorAll('#prepToggles .toggle').forEach(function(t,i){ t.classList.toggle('active', i===0); });
+  document.querySelectorAll('#matToggles .toggle').forEach(function(t,i){ t.classList.toggle('active', i===1); });
+  document.querySelectorAll('#primerToggles .toggle').forEach(function(t){ t.classList.remove('active'); t.classList.remove('primer-active'); if(t.dataset.val==='tinted') t.classList.add('primer-active'); });
+  document.querySelectorAll('#coatsWalls .toggle').forEach(function(t){ t.classList.toggle('active', t.dataset.val==='2'); });
+  document.querySelectorAll('#coacsCeil .toggle').forEach(function(t){ t.classList.toggle('active', t.dataset.val==='1'); });
+  document.querySelectorAll('#coatsTrim .toggle').forEach(function(t){ t.classList.toggle('active', t.dataset.val==='2'); });
+  renderRooms();
+  renderProjects();
+  window.scrollTo(0,0);
+}
+
+function renderProjects() {
+  var el = document.getElementById('projectList');
+  if (!projectsCache.length) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">Нет сохранённых проектов</div>';
+    return;
+  }
+  el.innerHTML = projectsCache.map(function(p) {
+    return '<div class="project-item ' + (p.id===currentProjectId?'current':'') + '" onclick="loadProject(\'' + p.id + '\')">' +
+      '<div class="proj-info"><div class="proj-name">' + p.name + '</div><div class="proj-meta">' + p.date + '</div></div>' +
+      '<div class="proj-total">$' + p.state.total.toLocaleString() + '</div>' +
+      '<button class="btn-del" onclick="deleteProject(\'' + p.id + '\',event)">x</button>' +
+    '</div>';
+  }).join('');
+}
+
+renderRooms();
+loadProjects();
+</script>
+</body>
+</html>
