@@ -100,6 +100,15 @@
     <div class="toggle" data-val="doors" onclick="toggleScope(this)">Двери</div>
     <div class="toggle" data-val="cabinets" onclick="toggleScope(this)">Шкафы / Кухня</div>
   </div>
+  <div style="margin-top:10px">
+    <div class="section-title" style="margin-bottom:8px;font-size:10px">Грунтовка (Primer)</div>
+    <div class="toggle-row" id="primerToggles">
+      <div class="toggle" data-val="none" onclick="togglePrimer(this)">Без грунтовки</div>
+      <div class="toggle active" data-val="tinted" onclick="togglePrimer(this)">Tinted primer (1 слой)</div>
+      <div class="toggle" data-val="regular" onclick="togglePrimer(this)">Обычный primer (1 слой)</div>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-top:6px" id="primerNote">Рекомендуется при переходе с тёмного в светлый — дешевле краски (~$25/gal)</div>
+  </div>
 </div>
 
 <!-- PREP -->
@@ -177,6 +186,7 @@ let rooms = [{ name: 'Гостиная', l: 16, w: 14, h: 9 }, { name: 'Спал
 let scope = new Set(['walls']);
 let prepMult = 1.0;
 let matsIncluded = true;
+let primerMode = 'tinted'; // none | tinted | regular
 let currentProjectId = null;
 
 function sqftRoom(r) { return Math.round(2 * (r.l + r.w) * r.h * 0.85); }
@@ -267,11 +277,15 @@ function calc() {
   let labor = Math.round(hrsTotal * hourly);
   let paintSqft = (scope.has('walls') ? totalWallSqft : 0) + totalCeilSqft;
   let gallonsWallsCeil = paintSqft / 350 * 2;
-  let gallonsTrim = scope.has('trim') ? totalTrimLf / 200 : 0;       // 1 gal per 200 lf
-  let gallonsDoors = scope.has('doors') ? doorCount * 0.25 : 0;      // 0.25 gal per door (2 sides)
-  let gallonsCabinets = scope.has('cabinets') ? rooms.length * 1 : 0; // 1 gal per room
+  let gallonsTrim = scope.has('trim') ? totalTrimLf / 200 : 0;
+  let gallonsDoors = scope.has('doors') ? doorCount * 0.25 : 0;
+  let gallonsCabinets = scope.has('cabinets') ? rooms.length * 1 : 0;
   let gallons = Math.ceil(gallonsWallsCeil + gallonsTrim + gallonsDoors + gallonsCabinets);
-  let mats = matsIncluded ? Math.round(gallons * 50 * 1.18) : 0;
+  // Primer: covers same sqft as walls+ceiling, 1 coat, cheaper per gal
+  let primerGallons = (primerMode !== 'none') ? Math.ceil(paintSqft / 350) : 0;
+  let primerPricePerGal = primerMode === 'tinted' ? 25 : 20;
+  let primerCost = matsIncluded ? Math.round(primerGallons * primerPricePerGal * 1.18) : 0;
+  let mats = matsIncluded ? Math.round(gallons * 50 * 1.18) + primerCost : 0;
   let total = labor + mats + supplies;
 
   document.getElementById('rTotalSqft').textContent = (scope.has('walls') ? totalWallSqft : 0) + (totalCeilSqft ? ' + ' + totalCeilSqft + ' ceil' : '') + ' sq ft';
@@ -297,7 +311,11 @@ function calc() {
     if (scope.has('trim') && totalTrimLf) parts.push('trim');
     if (scope.has('doors') && doorCount) parts.push('двери');
     if (scope.has('cabinets') && cabinetMult) parts.push('шкафы');
-    rows += row('Краска (' + galDesc + ' — ' + parts.join(', ') + ')', mats);
+    rows += row('Краска (' + galDesc + ' — ' + parts.join(', ') + ')', Math.round(gallons * 50 * 1.18));
+    if (primerMode !== 'none') {
+      const primerLabel = primerMode === 'tinted' ? 'Tinted primer' : 'Primer';
+      rows += row(primerLabel + ' (' + primerGallons + ' gal × $' + primerPricePerGal + ')', primerCost);
+    }
   }
   if (supplies) rows += row('Расходники (tape, валики, кисти...)', supplies);
   document.getElementById('breakdownRows').innerHTML = rows || '<div class="breakdown-row"><span style="color:var(--muted)">Выбери параметры выше</span></div>';
@@ -346,6 +364,7 @@ async function saveProject(forceNew) {
     scope: Array.from(scope),
     prepMult,
     matsIncluded,
+    primerMode,
     hourlyRate: document.getElementById('hourlyRate').value,
     supplies: document.getElementById('suppliesCost').value,
     complexity: document.getElementById('complexity').value,
@@ -384,8 +403,12 @@ function loadProject(id) {
   document.getElementById('suppliesCost').value = s.supplies;
   document.getElementById('complexity').value = s.complexity;
 
+  primerMode = s.primerMode || 'tinted';
   document.querySelectorAll('#scopeToggles .toggle').forEach(t => {
     t.classList.toggle('active', scope.has(t.dataset.val));
+  });
+  document.querySelectorAll('#primerToggles .toggle').forEach(t => {
+    t.classList.toggle('active', t.dataset.val === primerMode);
   });
   document.querySelectorAll('#prepToggles .toggle').forEach(t => {
     t.classList.toggle('active', parseFloat(t.dataset.mult) === prepMult);
@@ -413,6 +436,17 @@ async function deleteProject(id, e) {
   }
 }
 
+function togglePrimer(el) {
+  document.querySelectorAll('#primerToggles .toggle').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  primerMode = el.dataset.val;
+  const note = document.getElementById('primerNote');
+  if (primerMode === 'none') note.textContent = 'Краска в 2 слоя без грунтовки';
+  else if (primerMode === 'tinted') note.textContent = 'Рекомендуется при переходе с тёмного в светлый — дешевле краски (~$25/gal)';
+  else note.textContent = 'Стандартный белый primer (~$20/gal)';
+  calc();
+}
+
 function newProject() {
   rooms = [{ name: 'Гостиная', l: 16, w: 14, h: 9 }, { name: 'Спальня', l: 12, w: 11, h: 9 }];
   scope = new Set(['walls']);
@@ -423,7 +457,9 @@ function newProject() {
   document.getElementById('hourlyRate').value = '65';
   document.getElementById('suppliesCost').value = '175';
   document.getElementById('complexity').value = '1.0';
+  primerMode = 'tinted';
   document.querySelectorAll('#scopeToggles .toggle').forEach(t => t.classList.toggle('active', t.dataset.val === 'walls'));
+  document.querySelectorAll('#primerToggles .toggle').forEach(t => t.classList.toggle('active', t.dataset.val === 'tinted'));
   document.querySelectorAll('#prepToggles .toggle').forEach((t,i) => t.classList.toggle('active', i === 0));
   document.querySelectorAll('#matToggles .toggle').forEach((t,i) => t.classList.toggle('active', i === 1));
   renderRooms();
