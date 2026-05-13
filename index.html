@@ -266,7 +266,11 @@ function calc() {
 
   let labor = Math.round(hrsTotal * hourly);
   let paintSqft = (scope.has('walls') ? totalWallSqft : 0) + totalCeilSqft;
-  let gallons = Math.ceil(paintSqft / 350 * 2);
+  let gallonsWallsCeil = paintSqft / 350 * 2;
+  let gallonsTrim = scope.has('trim') ? totalTrimLf / 200 : 0;       // 1 gal per 200 lf
+  let gallonsDoors = scope.has('doors') ? doorCount * 0.25 : 0;      // 0.25 gal per door (2 sides)
+  let gallonsCabinets = scope.has('cabinets') ? rooms.length * 1 : 0; // 1 gal per room
+  let gallons = Math.ceil(gallonsWallsCeil + gallonsTrim + gallonsDoors + gallonsCabinets);
   let mats = matsIncluded ? Math.round(gallons * 50 * 1.18) : 0;
   let total = labor + mats + supplies;
 
@@ -286,7 +290,15 @@ function calc() {
   if (scope.has('doors') && doorCount) rows += row('Двери (' + doorCount + ' шт)', Math.round(hrsDoors*complexity*hourly));
   if (scope.has('cabinets') && cabinetMult) rows += row('Шкафы / кухня', Math.round(hrsCabinets*complexity*hourly));
   rows += row('Подготовка / уборка (' + rooms.length + ' комн × 1.25h)', Math.round(hrsPrep*hourly));
-  if (matsIncluded) rows += row('Краска (' + gallons + ' gal × 2 слоя)', mats);
+  if (matsIncluded) {
+    let galDesc = gallons + ' gal';
+    let parts = [];
+    if (scope.has('walls') || scope.has('ceiling')) parts.push('стены/потолки');
+    if (scope.has('trim') && totalTrimLf) parts.push('trim');
+    if (scope.has('doors') && doorCount) parts.push('двери');
+    if (scope.has('cabinets') && cabinetMult) parts.push('шкафы');
+    rows += row('Краска (' + galDesc + ' — ' + parts.join(', ') + ')', mats);
+  }
   if (supplies) rows += row('Расходники (tape, валики, кисти...)', supplies);
   document.getElementById('breakdownRows').innerHTML = rows || '<div class="breakdown-row"><span style="color:var(--muted)">Выбери параметры выше</span></div>';
 
